@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>Simple Q console</p>
+  <kdb-srv k-srv-type="ws" k-return-type="q" debug="true"></kdb-srv>
+
+  <textarea placeholder="Enter your queries here" k-id="t" rows="10" cols="80"></textarea>
+  <button onclick="document.getElementById('q').rerunQuery()">Send</button>
+  <kdb-query id='q' k-update-elements='pre' k-escape-q="yes" k-execute-on='manual' debug="true">"q)$t$","\n",(.Q.s @[value;"$t$";::])</kdb-query>
+
+  <pre k-id='pre' k-append='top'></pre>
+</body>
+</html>

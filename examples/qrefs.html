@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+
+</head>
+<body>
+  <p>Query resolves $id$ references to other elements and inserts values into the query. These elements can be</p>
+  <kdb-srv k-srv-type="http" fix-json=true debug="true"></kdb-srv>
+
+  <p>Selects</p>
+  <select k-id='s'><option value='1'>sym1</option><option value='1'>sym2</option><option value='1'>sym3</option></select>
+
+  <p>In forms</p>
+  <form>
+
+  <p>Text field</p>
+  <input k-id="ft" type="text" value="some text"> 
+
+  <p>Pass field</p>
+  <input k-id="fp" type="password" value="secretpass"> 
+
+  <p>Checkbox</p>
+  <input k-id="fc" type="checkbox" checked="yes"> I'm checkbox 
+
+  <p>Radio buttons, at least one should be marked with k-id</p>
+  <input k-id="fr" type="radio" checked value="yes" name="r1"> Yes, do it <br>
+  <input type="radio" value="no" name="r1"> Not, don't
+
+  <p>Textarea</p>
+  <textarea k-id="fta" rows="3" cols="40"> Some other
+   txt </textarea>
+
+  </form>
+  
+  <p>Text elements like this span:<span k-id='t'>100</span></p>  
+
+  <button onclick="document.getElementById('q').rerunQuery()">Refresh</button> Click it to resend the query
+
+  <kdb-query id="q" k-id="q1" k-update-elements="pre" debug="true">.Q.s `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
+
+  <p>Returned result: </p>
+  <pre k-id="pre"></pre>
+</body>
+</html>

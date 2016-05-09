@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <link href="../external/c3.min.css" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script src="../external/d3.min.js" charset="utf-8"></script>
+    <script src="../external/c3.min.js"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <h2>Basic charts. kdb-chart can chart tables if it can find the correct time and data columns.</h2>
+  <kdb-srv k-srv-type="ws" k-return-type="q" debug="true"></kdb-srv>
+  <kdb-srv k-id='s2' fix-json="true"></kdb-srv>
+
+  <p>Basic case: kdb-chart looks for the first time-like and data-like columns by default.</p>
+  <kdb-query k-srv="s2" k-update-elements='c1' debug="true">([] time:(00:00:01*til 30)+.z.Z; price:50+30?5.0)</kdb-query>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c1" debug="true"></kdb-chart>
+
+  <p>You can also set time and data columns explicitly and change the chart type.</p>
+  <kdb-query k-update-elements='c2' debug="true">update ask:bid+30?0.5 from ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+30?5.0)</kdb-query>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-time-col="time" k-data-cols="ask bid" k-chart-type="spline" debug="true"></kdb-chart>
+
+</body>
+</html>

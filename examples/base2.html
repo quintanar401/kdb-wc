@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <link href="../external/c3.min.css" rel="stylesheet" type="text/css">
+
+    <script src="../external/d3.min.js" charset="utf-8"></script>
+    <script src="../external/c3.min.js"></script>
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+ 
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+
+</head>
+<body>
+  <p>It is extremly easy to visualize data.</p>
+  <kdb-srv fix-json="true"></kdb-srv>
+  <kdb-query k-update-elements="tbl ch">([] time:.z.T+til[50]*00:00:10; price: 50?40*50?1.0)</kdb-query>
+  <kdb-chart k-id="ch" k-style='width:800px;height:400px;'></kdb-chart>
+  <kdb-table k-id="tbl"></kdb-table>
+</body>
+</html>
