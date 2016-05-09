@@ -47,6 +47,7 @@ Supported attributes:
 * `k-srv-uri` - optional, target websocket server. Format: "host:port". By default it is the current web server.
 * `k-srv-user` - optional, a user for http requests.
 * `k-srv-pass` - optional, a password for http requests.
+* `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server.
 * `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json? ` or `jsn? ` if it is not provided and the result type is `json`.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `fix-json` - optional, if it is set kdb-srv will send an additional query to fix a json serialization issue in the default .z.ph in kdb+ 3.2(it will set .h.tx[\`jsn] to .j.j').
@@ -74,7 +75,7 @@ You can provide parameters to the query by using $paramKID$ format. All such ent
 Supported attributes:
 * `k-query` - optional, a query can be set either in this attribute or between the tags like in the example above.
 * `k-srv` - optional, link to a `kdb-srv`. If it is not set the first available `kdb-srv` component will be used.
-* `k-execute-on` - optional, `load` by default. When to execute the query. `load` - when the document is loaded, `manual` - do not execute.
+* `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `k-id` of a button - execute on click.
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or you can provide their `k-id` in this attribute, in this way you can update arbitrary html elements.
 * `k-escape-q` - optional. If set forces `kdb-query` to escape " and \\ symbols in the query parameters (not query itself!).
 * `k-id` - optional, this id can be used to link other components to this one.

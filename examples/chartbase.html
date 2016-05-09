@@ -22,11 +22,11 @@
   <kdb-srv k-id='s2' fix-json="true"></kdb-srv>
 
   <p>Basic case: kdb-chart looks for the first time-like and data-like columns by default.</p>
-  <kdb-query k-srv="s2" k-update-elements='c1' debug="true">([] time:(00:00:01*til 30)+.z.Z; price:50+30?5.0)</kdb-query>
+  <kdb-query k-srv="s2" k-update-elements='c1' debug="true">([] time:(00:00:01*til 50)+.z.Z; price:50+sums -0.5+50?2)</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c1" debug="true"></kdb-chart>
 
   <p>You can also set time and data columns explicitly and change the chart type.</p>
-  <kdb-query k-update-elements='c2' debug="true">update ask:bid+30?0.5 from ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+30?5.0)</kdb-query>
+  <kdb-query k-update-elements='c2' debug="true">update ask:bid+0.1+0.1*30?5 from ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+sums -0.5+30?2)</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-time-col="time" k-data-cols="ask bid" k-chart-type="spline" debug="true"></kdb-chart>
 
 </body>

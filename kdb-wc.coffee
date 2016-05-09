@@ -12,6 +12,24 @@
     window.CustomEvent = CE
 )()
 
+extractInfo = (v) ->
+  return v if typeof v is 'string'
+  txt = ''
+  if v.nodeName is 'SELECT'
+    txt = v.options[v.selectedIndex].text
+  else if v.nodeName is 'INPUT'
+    if v.type is 'checkbox'
+      txt = if v.checked then '1b' else '0b'
+    else if v.type is 'radio'
+      txt = v.form.querySelector("input[type='radio'][name='#{v.name}']:checked")?.value || ''
+    else
+      txt = v?.value || 'unsupported'
+  else if v.nodeName is 'TEXTAREA'
+    txt = v.value
+  else
+    txt = v.textContent
+  txt
+
 class _KDBSrv extends HTMLElement
   createdCallback: ->
     @srvType = @attributes['k-srv-type']?.textContent || "http"
@@ -27,6 +45,8 @@ class _KDBSrv extends HTMLElement
     @ws = @wsReq = null
     @wsQueue = []
     console.log "kdb-connect inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
+    if @target
+      @target = document.querySelector "[k-id='#{@target}']" || @target
   runQuery: (q,cb) ->
     (cb = (r,e) -> null) unless cb
     return @sendHTTP q,cb if @srvType is 'http'
@@ -70,6 +90,7 @@ class _KDBSrv extends HTMLElement
     @wsReq = @wsQueue.shift()
     req = @wsReq.q
     req = @qPrefix + req if typeof req is 'string' and @qPrefix
+    req = "%target=#{extractInfo @target}%" + req if @target
     if @rType is 'q'
       try
         req = ' '+req if typeof req is 'string' and req[0] is '`' # compensate the strange behavior of serialize
@@ -81,7 +102,7 @@ class _KDBSrv extends HTMLElement
     @sendWS @wsReq.q,@wsReq.cb
     @wsReq = null
   sendHTTP: (q,cb) ->
-    if @fixJson
+    if @fixJson and !@target
       @fixJson = null
       @qPrefix = "jsn?enlist " unless @qPrefix
       return @runQuery "{.h.tx[`jsn]:(.j.j');1}[]", (r,e) => @runQuery q, cb
@@ -103,7 +124,7 @@ class _KDBSrv extends HTMLElement
         return cb null, "JSON.parse error: "+error.toString()
       cb res, null
     q = @qPrefix + encodeURIComponent q
-    q = q + "&target=" + @target if @target
+    q = q + "&target=" + extractInfo @target if @target
     console.log "kdb-connect sending request:"+q if @debug
     xhr.open 'GET', q, true, @srvUser, @srvPass
     xhr.send()
@@ -116,16 +137,18 @@ class _KDBQuery extends HTMLElement
     prvExec = @exec
     @query = @attributes['k-query']?.textContent || @textContent
     @srv = @attributes['k-srv']?.textContent || ""
-    @exec = @attributes['k-execute-on']?.textContent || "load"
+    @exec = @attributes['k-execute-on']?.textContent.split(' ').filter((e)-> e.length > 0) || ["load"]
     @debug = @attributes['debug']?.textContent || null
     @escapeQ = @attributes['k-escape-q']?.textContent || ""
     @updObjs = @attributes['k-update-elements']?.textContent.split(' ').filter((e)-> e.length > 0) || []
     @result = null
-    if @exec is 'load' and !(prvExec is 'load')
+    if 'load' in @exec and (!prvExec or !('load' in prvExec))
       if document.readyState in ['complete','interactive']
         setTimeout (=> @runQuery()), 100
       else
         document.addEventListener "DOMContentLoaded", (ev) => @runQuery()
+    for el in @exec when !(el in ['load','manual'])
+      @addUpdater v if v = document.querySelector "[k-id='#{el}']"
     @kRefs = @query.match(/\$\w+\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
     console.log "kdb-query inited: srv:#{@srv}, query:#{@query}, executeOn:#{@exec}, updateObs:#{@updObjs}, refs:#{@kRefs}" if @debug
@@ -152,6 +175,9 @@ class _KDBQuery extends HTMLElement
   onresult: (f) ->
     @addEventListener 'newResult', f
     f @getEv() if @result
+  addUpdater: (v) ->
+    if v.nodeName is 'BUTTON'
+      v.addEventListener 'click', (ev) => @rerunQuery()
   updateObjects: -> @updateObj document.querySelector "[k-id='#{o}']" for o in @updObjs
   updateObj: (o) ->
     return unless o
@@ -177,19 +203,8 @@ class _KDBQuery extends HTMLElement
     for n,v of @kMap
       if !v
         txt = n
-      else if v.nodeName is 'SELECT'
-        txt = v.options[v.selectedIndex].text
-      else if v.nodeName is 'INPUT'
-        if v.type is 'checkbox'
-          txt = if v.checked then '1b' else '0b'
-        else if v.type is 'radio'
-          txt = v.form.querySelector("input[type='radio'][name='#{v.name}']:checked")?.value || ''
-        else
-          txt = v?.value || 'unsupported'
-      else if v.nodeName is 'TEXTAREA'
-        txt = v.value
       else
-        txt = v.textContent
+        txt = extractInfo v
       q = q.replace (new RegExp "\\$#{n}\\$", "g"), @escape txt
     q
   escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"') else s
@@ -210,7 +225,7 @@ class _KDBTable extends HTMLElement
         @query = srv if srv = document.querySelector "[k-id='#{@query}']"
       if typeof @query is 'string'
         console.log "kdb-table: creating a query" if @debug
-        q = new KDBQuery()
+        q = new KDB.KDBQuery()
         q.setAttribute 'k-query', @query
         q.setAttribute 'k-srv', @srv if @srv
         q.setAttribute 'debug', @debug if @debug
@@ -266,7 +281,7 @@ class _KDBChart extends HTMLElement
         @query = srv if srv = document.querySelector "[k-id='#{@query}']"
       if typeof @query is 'string'
         console.log "kdb-chart: creating a query" if @debug
-        q = new KDBQuery()
+        q = new KDB.KDBQuery()
         q.setAttribute 'k-query', @query
         q.setAttribute 'k-srv', @srv if @srv
         q.setAttribute 'debug', @debug if @debug
@@ -360,7 +375,8 @@ class _KDBChart extends HTMLElement
     d = d.replace('.','-').replace('.','-') if d[4] is '.'
     d.replace('D','T')
 
-KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
-KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
-KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)
-KDBTable = document.registerElement('kdb-table', prototype: _KDBTable.prototype)
+window.KDB = {}
+KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
+KDB.KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
+KDB.KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)
+KDB.KDBTable = document.registerElement('kdb-table', prototype: _KDBTable.prototype)

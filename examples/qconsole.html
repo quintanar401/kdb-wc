@@ -16,8 +16,8 @@
   <kdb-srv k-srv-type="ws" k-return-type="q" debug="true"></kdb-srv>
 
   <textarea placeholder="Enter your queries here" k-id="t" rows="10" cols="80"></textarea>
-  <button onclick="document.getElementById('q').rerunQuery()">Send</button>
-  <kdb-query id='q' k-update-elements='pre' k-escape-q="yes" k-execute-on='manual' debug="true">"q)$t$","\n",(.Q.s @[value;"$t$";::])</kdb-query>
+  <button k-id='btn'>Send</button>
+  <kdb-query k-update-elements='pre' k-escape-q="yes" k-execute-on='manual btn' debug="true">"q)$t$","\n",(.Q.s @[value;"$t$";::])</kdb-query>
 
   <pre k-id='pre' k-append='top'></pre>
 </body>
