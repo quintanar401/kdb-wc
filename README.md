@@ -109,7 +109,13 @@ Supported attributes:
 
 ## kdb-chart
 
-`kdb-chart` can be used to visualize data. It can work in two modes - you either provide the full correct C3 config or `kdb-chart` will determine params itself. In the first case you can use absolutely all C3 features, in the second case you are limited to a timeseries chart.
+`kdb-chart` can be used to visualize data. It can work in the following modes:
+* You can provide the full correct C3 config. Absolutely all C3 features are available. See chart example.
+* If the result is a table `kdb-chart` can determine params (time and data) itself. If it succeeds it will create a timeseries chart.
+* If the result is a table you can also set explicitly data and time columns and line type.
+* If the result is a dictionary `kdb-chart` will create a pie chart (type can be changed to donut or gauge).
+* If you set type to 'merge-config' it will merge the provided config with its own config, in this way you can add additional params to the C3 config.
+* Finally you can set type to 'use-config' and `kdb-chart` will use your config and insert data into it. This gives you full control like in the first item.
 
 Example:
 ```

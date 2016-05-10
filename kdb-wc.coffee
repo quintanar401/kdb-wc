@@ -44,7 +44,7 @@ class _KDBSrv extends HTMLElement
     @hidden = true
     @ws = @wsReq = null
     @wsQueue = []
-    console.log "kdb-connect inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
+    console.log "kdb-srv inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
     if @target
       @target = document.querySelector "[k-id='#{@target}']" || @target
   runQuery: (q,cb) ->
@@ -57,21 +57,21 @@ class _KDBSrv extends HTMLElement
       @ws = new WebSocket("ws://#{@wsSrv}/")
       @ws.binaryType = 'arraybuffer'
       @ws.onopen = =>
-        console.log "kdb-connect-ws: opened" if @debug
+        console.log "kdb-srv-ws: opened" if @debug
         @processWSQueue()
       @ws.onclose = =>
-        console.log "kdb-connect-ws: closed" if @debug
+        console.log "kdb-srv-ws: closed" if @debug
         @ws = null
         @sendWSRes null,'closed'
       @ws.onerror = (e) =>
-        console.log "kdb-connect-ws: error #{e.data}" if @debug
+        console.log "kdb-srv-ws: error #{e.data}" if @debug
         @sendWSRes null,e.data
       @ws.onmessage = (e) =>
-        console.log "kdb-connect-ws: msg" if @debug
+        console.log "kdb-srv-ws: msg" if @debug
         try
           res = if @rType is "json" and typeof e.data is 'string' then JSON.parse e.data else if typeof e.data is 'object' then deserialize(e.data) else e.data
         catch error
-          console.log "kdb-connect-ws: exception in ws parse #{error}" if @debug
+          console.log "kdb-srv-ws: exception in ws parse #{error}" if @debug
           return @sendWSRes null, "result parse error: "+error.toString()
         @sendWSRes res, null
       return
@@ -82,7 +82,7 @@ class _KDBSrv extends HTMLElement
     try
       req.cb r,e
     catch err
-      console.log "kdb-connect-ws: exception in callback"
+      console.log "kdb-srv-ws: exception in callback"
       console.log err
     @processWSQueue()
   processWSQueue: ->
@@ -96,7 +96,7 @@ class _KDBSrv extends HTMLElement
         req = ' '+req if typeof req is 'string' and req[0] is '`' # compensate the strange behavior of serialize
         req = serialize req
       catch error
-        console.log "kdb-connect-ws: exception in ws send #{error}" if @debug
+        console.log "kdb-srv-ws: exception in ws send #{error}" if @debug
         return @sendWSRes null,'send'
     return @ws.send req if @ws and @ws.readyState is 1
     @sendWS @wsReq.q,@wsReq.cb
@@ -109,23 +109,27 @@ class _KDBSrv extends HTMLElement
     @qPrefix = "json?enlist " if !@qPrefix and @srvType is "http" and @rType is "json"
     xhr = new XMLHttpRequest()
     xhr.onerror = =>
-      console.log "kdb-connect error: "+xhr.statusText if @debug
+      console.log "kdb-srv error: "+xhr.statusText if @debug
       cb null, xhr.statusText
     xhr.ontimeout = =>
-      console.log "kdb-connect timeout" if @debug
+      console.log "kdb-srv timeout" if @debug
       cb null, "timeout"
     xhr.onload = =>
       return xhr.onerror() unless xhr.status is 200
-      console.log "kdb-connect data: "+xhr.responseText.slice(0,50) if @debug
+      console.log "kdb-srv data: "+xhr.responseText.slice(0,50) if @debug
       try
         res = if @rType is "json" then JSON.parse xhr.responseText else if @rType is "xml" then xhr.responseXML else xhr.responseText
       catch error
-        console.log "kdb-connect: exception in JSON.parse" if @debug
+        console.log "kdb-srv: exception in JSON.parse" if @debug
         return cb null, "JSON.parse error: "+error.toString()
-      cb res, null
+      try
+        cb res, null
+      catch err
+        console.log "kdb-srv: HTTP callback exception"
+        console.log err
     q = @qPrefix + encodeURIComponent q
     q = q + "&target=" + extractInfo @target if @target
-    console.log "kdb-connect sending request:"+q if @debug
+    console.log "kdb-srv sending request:"+q if @debug
     xhr.open 'GET', q, true, @srvUser, @srvPass
     xhr.send()
 
@@ -182,7 +186,11 @@ class _KDBQuery extends HTMLElement
   updateObj: (o) ->
     return unless o
     if o.kdbUpd
-      o.kdbUpd @result
+      try
+        o.kdbUpd @result
+      catch err
+        console.log "kdb-query:exception in kdbUpd"
+        console.log err
     else if o.nodeName is 'SELECT'
       o.innerHTML = ''
       for e,i in @result
@@ -260,6 +268,7 @@ class _KDBChart extends HTMLElement
     @query = @attributes['k-query']?.textContent || @textContent
     @debug = @attributes['debug']?.textContent || null
     @kAppend = @attributes['k-append']?.textContent || ""
+    @kConfig = @attributes['k-config']?.textContent
     kClass = @attributes['k-class']?.textContent || ""
     kStyle = @attributes['k-style']?.textContent || ""
     @kChType = @attributes['k-chart-type']?.textContent || "line"
@@ -271,7 +280,7 @@ class _KDBChart extends HTMLElement
     @kCont.className = kClass
     @kCont.style.cssText = kStyle
     this.appendChild @kCont
-    console.log "kdb-chart: query:#{@query}, type:#{@kChType}" if @debug
+    console.log "kdb-chart: query:#{@query}, type:#{@kChType}, cfg:#{@kConfig}" if @debug
   attachedCallback: ->
     if !@inited
       console.log "kdb-chart: initing" if @debug
@@ -299,11 +308,21 @@ class _KDBChart extends HTMLElement
     console.log r if @debug
     @updateChart r
   updateChart: (r) ->
-    if typeof r is 'object' and r.data
+    if @kChType is 'use-config'
+      return unless @kConfig and typeof r is 'object'
+      return if r.length is 0
+      console.log "kdb-chart: will use provided cfg" if @debug
+      try
+        cfg = JSON.parse @kConfig
+      catch err
+        console.log "kdb-chart: config parse exception"
+        return console.log err
+      cfg.data.rows = @convertAllTbl r
+    else if typeof r is 'object' and r.data
       console.log "C3 format detected" if @debug
       console.log r if @debug
       return @updateChartWithData r
-    if typeof r is 'object' and r.length>0
+    else if typeof r is 'object' and r.length>0
       # detect format
       console.log "Will detect the user format" if @debug
       return unless tm = @detectTime r[0]
@@ -325,9 +344,25 @@ class _KDBChart extends HTMLElement
             tick:
               fit: true
               format: xfmt
-      console.log "kdb-chart: cfg is" if @debug
-      console.log cfg if @debug
-      return @updateChartWithData cfg
+    else if typeof r is 'object'
+      # pie
+      t = @attributes['k-chart-type']?.textContent || "pie"
+      d = ([n].concat v for n,v of r)
+      cfg =
+        data:
+          columns: d
+          type: t
+    if @kChType is 'merge-config'
+      console.log "kdb-chart: will merge cfgs" if @debug
+      try
+        cfg2 = JSON.parse @kConfig
+      catch err
+        console.log "kdb-chart: config parse exception"
+        return console.log err
+      cfg = @mergeCfgs cfg, cfg2
+    console.log "kdb-chart: cfg is" if @debug
+    console.log cfg if @debug
+    return @updateChartWithData cfg
   updateChartWithData: (d) ->
     d['bindto'] = @kCont
     @chart = c3.generate d
@@ -338,6 +373,16 @@ class _KDBChart extends HTMLElement
     rows = [cols]
     for rec in t
       rows.push ((if n is tm then @convTime(rec[n]) else rec[n]) for n in cols)
+    rows
+  convertAllTbl: (t) ->
+    t = [t] unless t.length
+    cols = []; fmts = []
+    for n,v of t[0]
+      cols.push n
+      fmts[n] = d3.time.format f if f = @detectTimeFmt v
+    rows = [cols]
+    for rec in t
+      rows.push ((if fmts[n] then (fmts[n].parse @convTime rec[n]) else rec[n]) for n in cols)
     rows
   detectData: (r) ->
     return @kData if @kData
@@ -374,6 +419,17 @@ class _KDBChart extends HTMLElement
     d = d.slice(0,-6) unless d[d.length-4] is "."
     d = d.replace('.','-').replace('.','-') if d[4] is '.'
     d.replace('D','T')
+  mergeCfgs: (c1,c2) ->
+    for n,v of c1
+      continue unless v2 = c2[n]
+      if typeof v2 is 'object' and typeof v is 'object' and !v2.length and !v.length
+        c1[n] = @mergeCfgs v, v2
+      else
+        c1[n] = v2
+    for n,v of c2
+      continue if c1[n]
+      c1[n] = v
+    c1
 
 window.KDB = {}
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)

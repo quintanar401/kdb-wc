@@ -72,7 +72,7 @@
       this.ws = this.wsReq = null;
       this.wsQueue = [];
       if (this.debug) {
-        console.log("kdb-connect inited: srvType:" + this.srvType + ", target:" + this.target + ", prefix:" + this.qPrefix + ", rType:" + this.rType);
+        console.log("kdb-srv inited: srvType:" + this.srvType + ", target:" + this.target + ", prefix:" + this.qPrefix + ", rType:" + this.rType);
       }
       if (this.target) {
         return this.target = document.querySelector(("[k-id='" + this.target + "']") || this.target);
@@ -102,7 +102,7 @@
         this.ws.onopen = (function(_this) {
           return function() {
             if (_this.debug) {
-              console.log("kdb-connect-ws: opened");
+              console.log("kdb-srv-ws: opened");
             }
             return _this.processWSQueue();
           };
@@ -110,7 +110,7 @@
         this.ws.onclose = (function(_this) {
           return function() {
             if (_this.debug) {
-              console.log("kdb-connect-ws: closed");
+              console.log("kdb-srv-ws: closed");
             }
             _this.ws = null;
             return _this.sendWSRes(null, 'closed');
@@ -119,7 +119,7 @@
         this.ws.onerror = (function(_this) {
           return function(e) {
             if (_this.debug) {
-              console.log("kdb-connect-ws: error " + e.data);
+              console.log("kdb-srv-ws: error " + e.data);
             }
             return _this.sendWSRes(null, e.data);
           };
@@ -128,14 +128,14 @@
           return function(e) {
             var error, error1, res;
             if (_this.debug) {
-              console.log("kdb-connect-ws: msg");
+              console.log("kdb-srv-ws: msg");
             }
             try {
               res = _this.rType === "json" && typeof e.data === 'string' ? JSON.parse(e.data) : typeof e.data === 'object' ? deserialize(e.data) : e.data;
             } catch (error1) {
               error = error1;
               if (_this.debug) {
-                console.log("kdb-connect-ws: exception in ws parse " + error);
+                console.log("kdb-srv-ws: exception in ws parse " + error);
               }
               return _this.sendWSRes(null, "result parse error: " + error.toString());
             }
@@ -159,7 +159,7 @@
         req.cb(r, e);
       } catch (error1) {
         err = error1;
-        console.log("kdb-connect-ws: exception in callback");
+        console.log("kdb-srv-ws: exception in callback");
         console.log(err);
       }
       return this.processWSQueue();
@@ -187,7 +187,7 @@
         } catch (error1) {
           error = error1;
           if (this.debug) {
-            console.log("kdb-connect-ws: exception in ws send " + error);
+            console.log("kdb-srv-ws: exception in ws send " + error);
           }
           return this.sendWSRes(null, 'send');
         }
@@ -219,7 +219,7 @@
       xhr.onerror = (function(_this) {
         return function() {
           if (_this.debug) {
-            console.log("kdb-connect error: " + xhr.statusText);
+            console.log("kdb-srv error: " + xhr.statusText);
           }
           return cb(null, xhr.statusText);
         };
@@ -227,30 +227,36 @@
       xhr.ontimeout = (function(_this) {
         return function() {
           if (_this.debug) {
-            console.log("kdb-connect timeout");
+            console.log("kdb-srv timeout");
           }
           return cb(null, "timeout");
         };
       })(this);
       xhr.onload = (function(_this) {
         return function() {
-          var error, error1, res;
+          var err, error, error1, error2, res;
           if (xhr.status !== 200) {
             return xhr.onerror();
           }
           if (_this.debug) {
-            console.log("kdb-connect data: " + xhr.responseText.slice(0, 50));
+            console.log("kdb-srv data: " + xhr.responseText.slice(0, 50));
           }
           try {
             res = _this.rType === "json" ? JSON.parse(xhr.responseText) : _this.rType === "xml" ? xhr.responseXML : xhr.responseText;
           } catch (error1) {
             error = error1;
             if (_this.debug) {
-              console.log("kdb-connect: exception in JSON.parse");
+              console.log("kdb-srv: exception in JSON.parse");
             }
             return cb(null, "JSON.parse error: " + error.toString());
           }
-          return cb(res, null);
+          try {
+            return cb(res, null);
+          } catch (error2) {
+            err = error2;
+            console.log("kdb-srv: HTTP callback exception");
+            return console.log(err);
+          }
         };
       })(this);
       q = this.qPrefix + encodeURIComponent(q);
@@ -258,7 +264,7 @@
         q = q + "&target=" + extractInfo(this.target);
       }
       if (this.debug) {
-        console.log("kdb-connect sending request:" + q);
+        console.log("kdb-srv sending request:" + q);
       }
       xhr.open('GET', q, true, this.srvUser, this.srvPass);
       return xhr.send();
@@ -400,12 +406,18 @@
     };
 
     _KDBQuery.prototype.updateObj = function(o) {
-      var a, e, i, j, len, opt, ref, ref1, results, s;
+      var a, e, err, error1, i, j, len, opt, ref, ref1, results, s;
       if (!o) {
         return;
       }
       if (o.kdbUpd) {
-        return o.kdbUpd(this.result);
+        try {
+          return o.kdbUpd(this.result);
+        } catch (error1) {
+          err = error1;
+          console.log("kdb-query:exception in kdbUpd");
+          return console.log(err);
+        }
       } else if (o.nodeName === 'SELECT') {
         o.innerHTML = '';
         ref = this.result;
@@ -590,16 +602,17 @@
     }
 
     _KDBChart.prototype.createdCallback = function() {
-      var kClass, kStyle, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8;
+      var kClass, kStyle, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srv = ((ref = this.attributes['k-srv']) != null ? ref.textContent : void 0) || "";
       this.query = ((ref1 = this.attributes['k-query']) != null ? ref1.textContent : void 0) || this.textContent;
       this.debug = ((ref2 = this.attributes['debug']) != null ? ref2.textContent : void 0) || null;
       this.kAppend = ((ref3 = this.attributes['k-append']) != null ? ref3.textContent : void 0) || "";
-      kClass = ((ref4 = this.attributes['k-class']) != null ? ref4.textContent : void 0) || "";
-      kStyle = ((ref5 = this.attributes['k-style']) != null ? ref5.textContent : void 0) || "";
-      this.kChType = ((ref6 = this.attributes['k-chart-type']) != null ? ref6.textContent : void 0) || "line";
-      this.kTime = (ref7 = this.attributes['k-time-col']) != null ? ref7.textContent : void 0;
-      this.kData = (ref8 = this.attributes['k-data-cols']) != null ? ref8.textContent.split(' ').filter(function(el) {
+      this.kConfig = (ref4 = this.attributes['k-config']) != null ? ref4.textContent : void 0;
+      kClass = ((ref5 = this.attributes['k-class']) != null ? ref5.textContent : void 0) || "";
+      kStyle = ((ref6 = this.attributes['k-style']) != null ? ref6.textContent : void 0) || "";
+      this.kChType = ((ref7 = this.attributes['k-chart-type']) != null ? ref7.textContent : void 0) || "line";
+      this.kTime = (ref8 = this.attributes['k-time-col']) != null ? ref8.textContent : void 0;
+      this.kData = (ref9 = this.attributes['k-data-cols']) != null ? ref9.textContent.split(' ').filter(function(el) {
         return el.length > 0;
       }) : void 0;
       this.inited = false;
@@ -609,7 +622,7 @@
       this.kCont.style.cssText = kStyle;
       this.appendChild(this.kCont);
       if (this.debug) {
-        return console.log("kdb-chart: query:" + this.query + ", type:" + this.kChType);
+        return console.log("kdb-chart: query:" + this.query + ", type:" + this.kChType + ", cfg:" + this.kConfig);
       }
     };
 
@@ -678,8 +691,26 @@
     };
 
     _KDBChart.prototype.updateChart = function(r) {
-      var cfg, dt, fmt, tm, xfmt;
-      if (typeof r === 'object' && r.data) {
+      var cfg, cfg2, d, dt, err, error1, error2, fmt, n, ref, t, tm, v, xfmt;
+      if (this.kChType === 'use-config') {
+        if (!(this.kConfig && typeof r === 'object')) {
+          return;
+        }
+        if (r.length === 0) {
+          return;
+        }
+        if (this.debug) {
+          console.log("kdb-chart: will use provided cfg");
+        }
+        try {
+          cfg = JSON.parse(this.kConfig);
+        } catch (error1) {
+          err = error1;
+          console.log("kdb-chart: config parse exception");
+          return console.log(err);
+        }
+        cfg.data.rows = this.convertAllTbl(r);
+      } else if (typeof r === 'object' && r.data) {
         if (this.debug) {
           console.log("C3 format detected");
         }
@@ -687,8 +718,7 @@
           console.log(r);
         }
         return this.updateChartWithData(r);
-      }
-      if (typeof r === 'object' && r.length > 0) {
+      } else if (typeof r === 'object' && r.length > 0) {
         if (this.debug) {
           console.log("Will detect the user format");
         }
@@ -724,14 +754,44 @@
             }
           }
         };
-        if (this.debug) {
-          console.log("kdb-chart: cfg is");
-        }
-        if (this.debug) {
-          console.log(cfg);
-        }
-        return this.updateChartWithData(cfg);
+      } else if (typeof r === 'object') {
+        t = ((ref = this.attributes['k-chart-type']) != null ? ref.textContent : void 0) || "pie";
+        d = (function() {
+          var results;
+          results = [];
+          for (n in r) {
+            v = r[n];
+            results.push([n].concat(v));
+          }
+          return results;
+        })();
+        cfg = {
+          data: {
+            columns: d,
+            type: t
+          }
+        };
       }
+      if (this.kChType === 'merge-config') {
+        if (this.debug) {
+          console.log("kdb-chart: will merge cfgs");
+        }
+        try {
+          cfg2 = JSON.parse(this.kConfig);
+        } catch (error2) {
+          err = error2;
+          console.log("kdb-chart: config parse exception");
+          return console.log(err);
+        }
+        cfg = this.mergeCfgs(cfg, cfg2);
+      }
+      if (this.debug) {
+        console.log("kdb-chart: cfg is");
+      }
+      if (this.debug) {
+        console.log(cfg);
+      }
+      return this.updateChartWithData(cfg);
     };
 
     _KDBChart.prototype.updateChartWithData = function(d) {
@@ -756,6 +816,37 @@
           for (k = 0, len1 = cols.length; k < len1; k++) {
             n = cols[k];
             results.push(n === tm ? this.convTime(rec[n]) : rec[n]);
+          }
+          return results;
+        }).call(this));
+      }
+      return rows;
+    };
+
+    _KDBChart.prototype.convertAllTbl = function(t) {
+      var cols, f, fmts, j, len, n, rec, ref, rows, v;
+      if (!t.length) {
+        t = [t];
+      }
+      cols = [];
+      fmts = [];
+      ref = t[0];
+      for (n in ref) {
+        v = ref[n];
+        cols.push(n);
+        if (f = this.detectTimeFmt(v)) {
+          fmts[n] = d3.time.format(f);
+        }
+      }
+      rows = [cols];
+      for (j = 0, len = t.length; j < len; j++) {
+        rec = t[j];
+        rows.push((function() {
+          var k, len1, results;
+          results = [];
+          for (k = 0, len1 = cols.length; k < len1; k++) {
+            n = cols[k];
+            results.push(fmts[n] ? fmts[n].parse(this.convTime(rec[n])) : rec[n]);
           }
           return results;
         }).call(this));
@@ -856,6 +947,29 @@
         d = d.replace('.', '-').replace('.', '-');
       }
       return d.replace('D', 'T');
+    };
+
+    _KDBChart.prototype.mergeCfgs = function(c1, c2) {
+      var n, v, v2;
+      for (n in c1) {
+        v = c1[n];
+        if (!(v2 = c2[n])) {
+          continue;
+        }
+        if (typeof v2 === 'object' && typeof v === 'object' && !v2.length && !v.length) {
+          c1[n] = this.mergeCfgs(v, v2);
+        } else {
+          c1[n] = v2;
+        }
+      }
+      for (n in c2) {
+        v = c2[n];
+        if (c1[n]) {
+          continue;
+        }
+        c1[n] = v;
+      }
+      return c1;
     };
 
     return _KDBChart;

@@ -41,6 +41,7 @@
   
   <p>Text elements like this span:<span k-id='t'>100</span></p>  
 
+  <p>Buttons can be linked to a query to cause rerun on a click</p>
   <button onclick="document.getElementById('q').rerunQuery()">Refresh</button> Click it to resend the query
 
   <kdb-query id="q" k-id="q1" k-update-elements="pre" debug="true">.Q.s `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>

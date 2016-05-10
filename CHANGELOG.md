@@ -1,3 +1,6 @@
+## 0.3.0
+* Add ability to use user cfgs along with calculated data in kdb-chart
+
 ## 0.2.0
 * Turn srv.q into a proxy.
 * Add target to kdb-srv
