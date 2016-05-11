@@ -1,3 +1,7 @@
+## 0.4.0
+* add interval and delay to kdb-query
+* add flow support to kdb-chart
+
 ## 0.3.0
 * Add ability to use user cfgs along with calculated data in kdb-chart
 

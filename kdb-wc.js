@@ -75,7 +75,7 @@
         console.log("kdb-srv inited: srvType:" + this.srvType + ", target:" + this.target + ", prefix:" + this.qPrefix + ", rType:" + this.rType);
       }
       if (this.target) {
-        return this.target = document.querySelector(("[k-id='" + this.target + "']") || this.target);
+        return this.target = (document.querySelector("[k-id='" + this.target + "']")) || this.target;
       }
     };
 
@@ -287,8 +287,13 @@
     };
 
     _KDBQuery.prototype.setupQuery = function() {
-      var el, j, len, prvExec, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, v;
+      var el, j, len, prvExec, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, v;
       prvExec = this.exec;
+      if (this.ktimer) {
+        clearTimeout(this.ktimer);
+      }
+      this.ktimer = null;
+      this.iterationNumber = 0;
       this.query = ((ref = this.attributes['k-query']) != null ? ref.textContent : void 0) || this.textContent;
       this.srv = ((ref1 = this.attributes['k-srv']) != null ? ref1.textContent : void 0) || "";
       this.exec = ((ref2 = this.attributes['k-execute-on']) != null ? ref2.textContent.split(' ').filter(function(e) {
@@ -299,9 +304,11 @@
       this.updObjs = ((ref5 = this.attributes['k-update-elements']) != null ? ref5.textContent.split(' ').filter(function(e) {
         return e.length > 0;
       }) : void 0) || [];
+      this.kInterval = Number.parseInt(((ref6 = this.attributes['k-interval']) != null ? ref6.textContent : void 0) || "0");
+      this.kDelay = Number.parseInt(((ref7 = this.attributes['k-delay']) != null ? ref7.textContent : void 0) || "0");
       this.result = null;
       if (indexOf.call(this.exec, 'load') >= 0 && (!prvExec || !(indexOf.call(prvExec, 'load') >= 0))) {
-        if ((ref6 = document.readyState) === 'complete' || ref6 === 'interactive') {
+        if ((ref8 = document.readyState) === 'complete' || ref8 === 'interactive') {
           setTimeout(((function(_this) {
             return function() {
               return _this.runQuery();
@@ -315,21 +322,28 @@
           })(this));
         }
       }
-      ref7 = this.exec;
-      for (j = 0, len = ref7.length; j < len; j++) {
-        el = ref7[j];
+      ref9 = this.exec;
+      for (j = 0, len = ref9.length; j < len; j++) {
+        el = ref9[j];
         if (!(el === 'load' || el === 'manual')) {
           if (v = document.querySelector("[k-id='" + el + "']")) {
             this.addUpdater(v);
           }
         }
       }
-      this.kRefs = (ref8 = this.query.match(/\$\w+\$/g)) != null ? ref8.map(function(e) {
+      this.kRefs = (ref10 = this.query.match(/\$\w+\$/g)) != null ? ref10.map(function(e) {
         return e.slice(1, e.length - 1);
       }) : void 0;
       this.kMap = null;
+      if (indexOf.call(this.exec, 'timer') >= 0) {
+        setTimeout(((function(_this) {
+          return function() {
+            return _this.rerunQuery();
+          };
+        })(this)), this.kDelay ? this.kDelay : this.kInterval);
+      }
       if (this.debug) {
-        return console.log("kdb-query inited: srv:" + this.srv + ", query:" + this.query + ", executeOn:" + this.exec + ", updateObs:" + this.updObjs + ", refs:" + this.kRefs);
+        return console.log("kdb-query inited: srv:" + this.srv + ", query:" + this.query + ", executeOn:" + this.exec + ", updateObs:" + this.updObjs + ", refs:" + this.kRefs + ", delay:" + this.kDelay + ", interval:" + this.kInterval);
       }
     };
 
@@ -351,13 +365,19 @@
       }
       return this.srv.runQuery(this.resolveRefs(this.query), (function(_this) {
         return function(r, e) {
+          _this.iterationNumber += 1;
           if (_this.debug) {
             console.log("kdb-query: got response with status " + e);
           }
           if (!e) {
             _this.result = r;
             _this.sendEv();
-            return _this.updateObjects();
+            _this.updateObjects();
+          }
+          if (_this.kInterval && indexOf.call(_this.exec, 'timer') >= 0) {
+            return setTimeout((function() {
+              return _this.rerunQuery();
+            }), _this.kInterval);
           }
         };
       })(this));
@@ -463,7 +483,11 @@
       for (n in ref1) {
         v = ref1[n];
         if (!v) {
-          txt = n;
+          if (n === "i") {
+            txt = this.iterationNumber.toString();
+          } else {
+            txt = n;
+          }
         } else {
           txt = extractInfo(v);
         }
@@ -606,7 +630,7 @@
       this.srv = ((ref = this.attributes['k-srv']) != null ? ref.textContent : void 0) || "";
       this.query = ((ref1 = this.attributes['k-query']) != null ? ref1.textContent : void 0) || this.textContent;
       this.debug = ((ref2 = this.attributes['debug']) != null ? ref2.textContent : void 0) || null;
-      this.kAppend = ((ref3 = this.attributes['k-append']) != null ? ref3.textContent : void 0) || "";
+      this.kFlow = (((ref3 = this.attributes['k-flow']) != null ? ref3.textContent : void 0) || "false") === "true";
       this.kConfig = (ref4 = this.attributes['k-config']) != null ? ref4.textContent : void 0;
       kClass = ((ref5 = this.attributes['k-class']) != null ? ref5.textContent : void 0) || "";
       kStyle = ((ref6 = this.attributes['k-style']) != null ? ref6.textContent : void 0) || "";
@@ -617,6 +641,7 @@
       }) : void 0;
       this.inited = false;
       this.chart = null;
+      this.chSrc = '';
       this.kCont = document.createElement('div');
       this.kCont.className = kClass;
       this.kCont.style.cssText = kStyle;
@@ -691,7 +716,44 @@
     };
 
     _KDBChart.prototype.updateChart = function(r) {
-      var cfg, cfg2, d, dt, err, error1, error2, fmt, n, ref, t, tm, v, xfmt;
+      var cfg, cfg2, d, dt, err, error1, error2, fmt, n, ref, t, tbl, tm, v, xfmt;
+      if (this.chart && this.kFlow) {
+        if (this.chSrc === 'c3') {
+          return this.updateFlowWithData(r);
+        }
+        tbl = r;
+        cfg = {};
+        if (r['data']) {
+          if (r.to) {
+            cfg.to = r.to;
+          }
+          if (r.length) {
+            cfg.length = r.length;
+          }
+          if (r.duration) {
+            cfg.duration = r.duration;
+          }
+          tbl = r.data;
+        }
+        if (this.chSrc === 'user') {
+          cfg.rows = this.convertAllTbl(tbl);
+        }
+        if (this.chSrc === 'auto') {
+          cfg.rows = this.convertTbl(tbl, this.dtCfg.time, this.dtCfg.data);
+        }
+        if (this.chSrc === 'dict') {
+          cfg.columns = (function() {
+            var results;
+            results = [];
+            for (n in tbl) {
+              v = tbl[n];
+              results.push([n].concat(v));
+            }
+            return results;
+          })();
+        }
+        return this.updateFlowWithData(cfg);
+      }
       if (this.kChType === 'use-config') {
         if (!(this.kConfig && typeof r === 'object')) {
           return;
@@ -710,6 +772,7 @@
           return console.log(err);
         }
         cfg.data.rows = this.convertAllTbl(r);
+        this.chSrc = 'user';
       } else if (typeof r === 'object' && r.data) {
         if (this.debug) {
           console.log("C3 format detected");
@@ -717,6 +780,7 @@
         if (this.debug) {
           console.log(r);
         }
+        this.chSrc = 'c3';
         return this.updateChartWithData(r);
       } else if (typeof r === 'object' && r.length > 0) {
         if (this.debug) {
@@ -734,6 +798,10 @@
         if (this.debug) {
           console.log("Data is " + dt);
         }
+        this.dtCfg = {
+          data: dt,
+          time: tm
+        };
         if (dt.length === 0) {
           return;
         }
@@ -754,6 +822,7 @@
             }
           }
         };
+        this.chSrc = 'auto';
       } else if (typeof r === 'object') {
         t = ((ref = this.attributes['k-chart-type']) != null ? ref.textContent : void 0) || "pie";
         d = (function() {
@@ -771,6 +840,7 @@
             type: t
           }
         };
+        this.chSrc = 'dict';
       }
       if (this.kChType === 'merge-config') {
         if (this.debug) {
@@ -797,6 +867,10 @@
     _KDBChart.prototype.updateChartWithData = function(d) {
       d['bindto'] = this.kCont;
       return this.chart = c3.generate(d);
+    };
+
+    _KDBChart.prototype.updateFlowWithData = function(d) {
+      return this.chart.flow(d);
     };
 
     _KDBChart.prototype.convertTbl = function(t, tm, dt) {

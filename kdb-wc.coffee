@@ -46,7 +46,7 @@ class _KDBSrv extends HTMLElement
     @wsQueue = []
     console.log "kdb-srv inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
     if @target
-      @target = document.querySelector "[k-id='#{@target}']" || @target
+      @target = (document.querySelector "[k-id='#{@target}']") || @target
   runQuery: (q,cb) ->
     (cb = (r,e) -> null) unless cb
     return @sendHTTP q,cb if @srvType is 'http'
@@ -139,12 +139,17 @@ class _KDBQuery extends HTMLElement
     @setupQuery()
   setupQuery: ->
     prvExec = @exec
+    clearTimeout @ktimer if @ktimer
+    @ktimer = null
+    @iterationNumber = 0
     @query = @attributes['k-query']?.textContent || @textContent
     @srv = @attributes['k-srv']?.textContent || ""
     @exec = @attributes['k-execute-on']?.textContent.split(' ').filter((e)-> e.length > 0) || ["load"]
     @debug = @attributes['debug']?.textContent || null
     @escapeQ = @attributes['k-escape-q']?.textContent || ""
     @updObjs = @attributes['k-update-elements']?.textContent.split(' ').filter((e)-> e.length > 0) || []
+    @kInterval = Number.parseInt(@attributes['k-interval']?.textContent || "0")
+    @kDelay = Number.parseInt(@attributes['k-delay']?.textContent || "0")
     @result = null
     if 'load' in @exec and (!prvExec or !('load' in prvExec))
       if document.readyState in ['complete','interactive']
@@ -155,7 +160,9 @@ class _KDBQuery extends HTMLElement
       @addUpdater v if v = document.querySelector "[k-id='#{el}']"
     @kRefs = @query.match(/\$\w+\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
-    console.log "kdb-query inited: srv:#{@srv}, query:#{@query}, executeOn:#{@exec}, updateObs:#{@updObjs}, refs:#{@kRefs}" if @debug
+    if 'timer' in @exec
+      setTimeout (=> @rerunQuery()), if @kDelay then @kDelay else @kInterval
+    console.log "kdb-query inited: srv:#{@srv}, query:#{@query}, executeOn:#{@exec}, updateObs:#{@updObjs}, refs:#{@kRefs}, delay:#{@kDelay}, interval:#{@kInterval}" if @debug
   rerunQuery: ->
     @result = null
     @runQuery()
@@ -165,11 +172,13 @@ class _KDBQuery extends HTMLElement
       @srv = if @srv is "" then document.getElementsByTagName("kdb-srv")?[0] else document.querySelector "[k-id='#{@srv}']"
     console.log "kdb-query: executing query" if @debug
     @srv.runQuery @resolveRefs(@query), (r,e) =>
+      @iterationNumber += 1
       console.log "kdb-query: got response with status #{e}" if @debug
       if !e
         @result = r
         @sendEv()
         @updateObjects()
+      setTimeout (=> @rerunQuery()), @kInterval if @kInterval and 'timer' in @exec
   sendEv: -> @dispatchEvent @getEv() if @result
   getEv: ->
     new CustomEvent "newResult",
@@ -210,7 +219,7 @@ class _KDBQuery extends HTMLElement
       @kMap[e] = document.querySelector "[k-id='#{e}']" for e of @kMap
     for n,v of @kMap
       if !v
-        txt = n
+        if n is "i" then txt = @iterationNumber.toString() else txt = n
       else
         txt = extractInfo v
       q = q.replace (new RegExp "\\$#{n}\\$", "g"), @escape txt
@@ -267,7 +276,7 @@ class _KDBChart extends HTMLElement
     @srv = @attributes['k-srv']?.textContent || ""
     @query = @attributes['k-query']?.textContent || @textContent
     @debug = @attributes['debug']?.textContent || null
-    @kAppend = @attributes['k-append']?.textContent || ""
+    @kFlow = (@attributes['k-flow']?.textContent || "false") is "true"
     @kConfig = @attributes['k-config']?.textContent
     kClass = @attributes['k-class']?.textContent || ""
     kStyle = @attributes['k-style']?.textContent || ""
@@ -276,6 +285,7 @@ class _KDBChart extends HTMLElement
     @kData = @attributes['k-data-cols']?.textContent.split(' ').filter (el) -> el.length>0
     @inited = false
     @chart = null
+    @chSrc = ''
     @kCont = document.createElement 'div'
     @kCont.className = kClass
     @kCont.style.cssText = kStyle
@@ -308,6 +318,20 @@ class _KDBChart extends HTMLElement
     console.log r if @debug
     @updateChart r
   updateChart: (r) ->
+    if @chart and @kFlow
+      if @chSrc is 'c3'
+        return @updateFlowWithData r
+      tbl = r
+      cfg = {}
+      if r['data']
+        cfg.to = r.to if r.to
+        cfg.length = r.length if r.length
+        cfg.duration = r.duration if r.duration
+        tbl = r.data
+      cfg.rows = @convertAllTbl tbl if @chSrc is 'user'
+      cfg.rows = @convertTbl tbl,@dtCfg.time,@dtCfg.data if @chSrc is 'auto'
+      cfg.columns = ([n].concat v for n,v of tbl) if @chSrc is 'dict'
+      return @updateFlowWithData cfg
     if @kChType is 'use-config'
       return unless @kConfig and typeof r is 'object'
       return if r.length is 0
@@ -318,9 +342,11 @@ class _KDBChart extends HTMLElement
         console.log "kdb-chart: config parse exception"
         return console.log err
       cfg.data.rows = @convertAllTbl r
+      @chSrc = 'user'
     else if typeof r is 'object' and r.data
       console.log "C3 format detected" if @debug
       console.log r if @debug
+      @chSrc = 'c3'
       return @updateChartWithData r
     else if typeof r is 'object' and r.length>0
       # detect format
@@ -331,6 +357,7 @@ class _KDBChart extends HTMLElement
       console.log "Time is #{tm}, fmt is #{fmt}, xfmt is #{xfmt}" if @debug
       dt = @detectData r[0]
       console.log "Data is #{dt}" if @debug
+      @dtCfg = data: dt, time: tm
       return if dt.length is 0
       cfg =
         data:
@@ -344,6 +371,7 @@ class _KDBChart extends HTMLElement
             tick:
               fit: true
               format: xfmt
+      @chSrc = 'auto'
     else if typeof r is 'object'
       # pie
       t = @attributes['k-chart-type']?.textContent || "pie"
@@ -352,6 +380,7 @@ class _KDBChart extends HTMLElement
         data:
           columns: d
           type: t
+      @chSrc = 'dict'
     if @kChType is 'merge-config'
       console.log "kdb-chart: will merge cfgs" if @debug
       try
@@ -366,6 +395,7 @@ class _KDBChart extends HTMLElement
   updateChartWithData: (d) ->
     d['bindto'] = @kCont
     @chart = c3.generate d
+  updateFlowWithData: (d) -> @chart.flow d
   convertTbl: (t,tm,dt) ->
     cols = []
     for n of t[0]

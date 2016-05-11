@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <link href="../external/c3.min.css" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script src="../external/d3.min.js" charset="utf-8"></script>
+    <script src="../external/c3.min.js"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <h2>All charts can be updated realtime.</h2>
+  <kdb-srv k-srv-type="ws" k-return-type="q"></kdb-srv>
+
+  <p>If C3 config is used all settings are up to you. Provide C3 compatible flow config.</p>
+  <kdb-query k-update-elements='c1'>enlist[`data]!enlist enlist[`columns]!enlist (("data1";30;200;100;400;150;250);("data2";50;20;10;40;15;25))</kdb-query>
+  <kdb-query k-update-elements='c1' k-interval='2000' debug='true'
+    k-execute-on='timer'>`columns`length!((`data1,2?100;`data2,2?100);2)</kdb-query>  
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c1" k-flow="true"></kdb-chart>
+
+  <p>If the default settings were used - provide similar data as a table.</p>
+  <kdb-query k-update-elements='c2' k-execute-on="timer" k-delay="1"
+     k-interval="2000">`time xasc([] time:.z.T-00:00:00.400*til $[$i$;5;50]; price:50+sums -0.5+$[$i$;5;50]?2)</kdb-query>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-flow="true"></kdb-chart>
+
+  <p>Or dictionary again.</p>
+  <kdb-query k-update-elements='c3' k-execute-on="timer" k-delay="1" k-interval="2000">`VOD.L`BP.L`Others!(30;20;first 20+1?30)</kdb-query>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c3" k-flow="true"></kdb-chart>
+
+  <p>If you used use-config option - provide data in he same format.</p>
+</body>
