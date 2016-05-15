@@ -14,12 +14,15 @@
   <p>kdb-query can update dependent elements:</p>
   <kdb-srv fix-json="true" debug="true"></kdb-srv>
   <kdb-query k-update-elements="t1" debug="true">([] a:`a`b`c`d)</kdb-query>
-  <kdb-query k-update-elements="s1 c1" debug="true">`a`b`c`d</kdb-query>
+  <kdb-query k-update-elements="s1 c1 dlist" debug="true">`a`b`c`d</kdb-query>
   <kdb-query k-update-elements="c1" debug="true">string .z.ph</kdb-query>
   <p>kdb-table</p>
   <kdb-table k-id="t1" debug="true"></kdb-table>
   <p>select</p>
   <select k-id='s1'></select>
+  <p>Input with datalist</p>
+  <input list="dlist" type="text"></input>
+  <datalist id="dlist" k-id="dlist"></datalist>
   <p>Any text based tag like pre (with the optional append attribute)</p>
   <pre k-id="c1" k-append="top"></pre>
 </body>

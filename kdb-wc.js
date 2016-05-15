@@ -58,7 +58,7 @@
     }
 
     _KDBSrv.prototype.createdCallback = function() {
-      var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8;
+      var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srvType = ((ref = this.attributes['k-srv-type']) != null ? ref.textContent : void 0) || "http";
       this.target = ((ref1 = this.attributes['k-target']) != null ? ref1.textContent : void 0) || null;
       this.wsSrv = ((ref2 = this.attributes['k-srv-uri']) != null ? ref2.textContent : void 0) || location.host;
@@ -68,6 +68,7 @@
       this.debug = ((ref6 = this.attributes['debug']) != null ? ref6.textContent : void 0) || null;
       this.rType = ((ref7 = this.attributes['k-return-type']) != null ? ref7.textContent : void 0) || "json";
       this.fixJson = ((ref8 = this.attributes['fix-json']) != null ? ref8.textContent : void 0) || null;
+      this.kFeed = (((ref9 = this.attributes['k-feed']) != null ? ref9.textContent : void 0) || "false") === "true";
       this.hidden = true;
       this.ws = this.wsReq = null;
       this.wsQueue = [];
@@ -154,7 +155,9 @@
       if (!(req = this.wsReq)) {
         return;
       }
-      this.wsReq = null;
+      if (!this.kFeed) {
+        this.wsReq = null;
+      }
       try {
         req.cb(r, e);
       } catch (error1) {
@@ -287,7 +290,7 @@
     };
 
     _KDBQuery.prototype.setupQuery = function() {
-      var el, j, len, prvExec, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, v;
+      var el, j, len, prvExec, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, v;
       prvExec = this.exec;
       if (this.ktimer) {
         clearTimeout(this.ktimer);
@@ -304,11 +307,18 @@
       this.updObjs = ((ref5 = this.attributes['k-update-elements']) != null ? ref5.textContent.split(' ').filter(function(e) {
         return e.length > 0;
       }) : void 0) || [];
-      this.kInterval = Number.parseInt(((ref6 = this.attributes['k-interval']) != null ? ref6.textContent : void 0) || "0");
-      this.kDelay = Number.parseInt(((ref7 = this.attributes['k-delay']) != null ? ref7.textContent : void 0) || "0");
+      this.kInterval = ((ref6 = this.attributes['k-interval']) != null ? ref6.textContent : void 0) || "0";
+      this.kInterval = Number.parseInt ? Number.parseInt(this.kInterval) : Number(this.kInterval);
+      this.kDelay = ((ref7 = this.attributes['k-delay']) != null ? ref7.textContent : void 0) || "0";
+      this.kDelay = Number.parseInt ? Number.parseInt(this.kDelay) : Number(this.kDelay);
+      if (this.kFilter = (ref8 = this.attributes['k-filter']) != null ? ref8.textContent : void 0) {
+        this.kFilter = this.kFilter.split(".").reduce((function(x, y) {
+          return x[y];
+        }), window);
+      }
       this.result = null;
       if (indexOf.call(this.exec, 'load') >= 0 && (!prvExec || !(indexOf.call(prvExec, 'load') >= 0))) {
-        if ((ref8 = document.readyState) === 'complete' || ref8 === 'interactive') {
+        if ((ref9 = document.readyState) === 'complete' || ref9 === 'interactive') {
           setTimeout(((function(_this) {
             return function() {
               return _this.runQuery();
@@ -322,16 +332,16 @@
           })(this));
         }
       }
-      ref9 = this.exec;
-      for (j = 0, len = ref9.length; j < len; j++) {
-        el = ref9[j];
-        if (!(el === 'load' || el === 'manual')) {
+      ref10 = this.exec;
+      for (j = 0, len = ref10.length; j < len; j++) {
+        el = ref10[j];
+        if (!(el === 'load' || el === 'manual' || el === 'timer')) {
           if (v = document.querySelector("[k-id='" + el + "']")) {
             this.addUpdater(v);
           }
         }
       }
-      this.kRefs = (ref10 = this.query.match(/\$\w+\$/g)) != null ? ref10.map(function(e) {
+      this.kRefs = (ref11 = this.query.match(/\$\w+\$/g)) != null ? ref11.map(function(e) {
         return e.slice(1, e.length - 1);
       }) : void 0;
       this.kMap = null;
@@ -370,6 +380,9 @@
             console.log("kdb-query: got response with status " + e);
           }
           if (!e) {
+            if (_this.kFilter) {
+              r = (typeof _this.kFilter === 'object' ? _this.kFilter.filter(r) : _this.kFilter(r));
+            }
             _this.result = r;
             _this.sendEv();
             _this.updateObjects();
@@ -411,6 +424,13 @@
             return _this.rerunQuery();
           };
         })(this));
+      } else {
+        return v.addEventListener('click', (function(_this) {
+          return function(ev) {
+            _this.kLastEvent = ev;
+            return _this.rerunQuery();
+          };
+        })(this));
       }
     };
 
@@ -426,7 +446,7 @@
     };
 
     _KDBQuery.prototype.updateObj = function(o) {
-      var a, e, err, error1, i, j, len, opt, ref, ref1, results, s;
+      var a, e, err, error1, i, j, len, opt, ref, ref1, ref2, ref3, results, s, ty;
       if (!o) {
         return;
       }
@@ -438,33 +458,44 @@
           console.log("kdb-query:exception in kdbUpd");
           return console.log(err);
         }
-      } else if (o.nodeName === 'SELECT') {
+      } else if ((ref = o.nodeName) === 'SELECT' || ref === 'DATALIST') {
         o.innerHTML = '';
-        ref = this.result;
+        ref1 = this.result;
         results = [];
-        for (i = j = 0, len = ref.length; j < len; i = ++j) {
-          e = ref[i];
+        for (i = j = 0, len = ref1.length; j < len; i = ++j) {
+          e = ref1[i];
           opt = document.createElement('option');
-          opt.value = i;
+          opt.value = e.toString();
           opt.text = e.toString();
-          results.push(o.add(opt));
+          results.push(o.appendChild(opt));
         }
         return results;
       } else {
-        a = ((ref1 = o.attributes['k-append']) != null ? ref1.textContent : void 0) || 'overwrite';
+        a = ((ref2 = o.attributes['k-append']) != null ? ref2.textContent : void 0) || 'overwrite';
+        ty = ((ref3 = o.attributes['k-content-type']) != null ? ref3.textContent : void 0) || 'text';
         s = o.textContent ? '\n' : '';
-        if (a === 'top') {
-          return o.textContent = this.result.toString() + s + o.textContent;
-        } else if (a === 'bottom') {
-          return o.textContent += s + this.result.toString();
+        if (ty === 'text') {
+          if (a === 'top') {
+            return o.textContent = this.result.toString() + s + o.textContent;
+          } else if (a === 'bottom') {
+            return o.textContent += s + this.result.toString();
+          } else {
+            return o.textContent = this.result.toString();
+          }
         } else {
-          return o.textContent = this.result.toString();
+          if (a === 'top') {
+            return o.innerHTML = this.result.toString() + s + o.innerHTML;
+          } else if (a === 'bottom') {
+            return o.innerHTML += s + this.result.toString();
+          } else {
+            return o.innerHTML = this.result.toString();
+          }
         }
       }
     };
 
     _KDBQuery.prototype.resolveRefs = function(q) {
-      var e, j, len, n, ref, ref1, txt, v;
+      var e, j, len, n, ref, ref1, ref2, txt, v;
       if (!this.kRefs) {
         return q;
       }
@@ -483,11 +514,7 @@
       for (n in ref1) {
         v = ref1[n];
         if (!v) {
-          if (n === "i") {
-            txt = this.iterationNumber.toString();
-          } else {
-            txt = n;
-          }
+          txt = n === "i" ? this.iterationNumber.toString() : n === 'txt' ? (ref2 = this.kLastEvent.target) != null ? ref2.textContent : void 0 : n;
         } else {
           txt = extractInfo(v);
         }
@@ -498,7 +525,7 @@
 
     _KDBQuery.prototype.escape = function(s) {
       if (this.escapeQ) {
-        return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\240/g, " ");
       } else {
         return s;
       }
@@ -716,7 +743,7 @@
     };
 
     _KDBChart.prototype.updateChart = function(r) {
-      var cfg, cfg2, d, dt, err, error1, error2, fmt, n, ref, t, tbl, tm, v, xfmt;
+      var cfg, d, dt, fmt, n, ref, t, tbl, tm, v, xfmt;
       if (this.chart && this.kFlow) {
         if (this.chSrc === 'c3') {
           return this.updateFlowWithData(r);
@@ -764,13 +791,7 @@
         if (this.debug) {
           console.log("kdb-chart: will use provided cfg");
         }
-        try {
-          cfg = JSON.parse(this.kConfig);
-        } catch (error1) {
-          err = error1;
-          console.log("kdb-chart: config parse exception");
-          return console.log(err);
-        }
+        cfg = this.getConfig(this.kConfig);
         cfg.data.rows = this.convertAllTbl(r);
         this.chSrc = 'user';
       } else if (typeof r === 'object' && r.data) {
@@ -812,6 +833,9 @@
             type: this.kChType,
             xFormat: fmt
           },
+          point: {
+            show: false
+          },
           axis: {
             x: {
               type: 'timeseries',
@@ -846,14 +870,7 @@
         if (this.debug) {
           console.log("kdb-chart: will merge cfgs");
         }
-        try {
-          cfg2 = JSON.parse(this.kConfig);
-        } catch (error2) {
-          err = error2;
-          console.log("kdb-chart: config parse exception");
-          return console.log(err);
-        }
-        cfg = this.mergeCfgs(cfg, cfg2);
+        cfg = this.mergeCfgs(cfg, this.getConfig(this.kConfig));
       }
       if (this.debug) {
         console.log("kdb-chart: cfg is");
@@ -1046,11 +1063,43 @@
       return c1;
     };
 
+    _KDBChart.prototype.copyCfg = function(c) {
+      var cc, n, v;
+      cc = {};
+      for (n in c) {
+        v = c[n];
+        if (typeof v === 'object' && !v.length) {
+          cc[n] = this.copyCfg(v);
+        } else {
+          cc[n] = v;
+        }
+      }
+      return cc;
+    };
+
+    _KDBChart.prototype.getConfig = function(c) {
+      var cfg, err, error1;
+      if (/^[\w\.]+$/.test(c)) {
+        return this.copyCfg(c.split(".").reduce((function(x, y) {
+          return x[y];
+        }), window));
+      }
+      try {
+        return cfg = JSON.parse(c);
+      } catch (error1) {
+        err = error1;
+        console.log("kdb-chart: config parse exception");
+        return console.log(err);
+      }
+    };
+
     return _KDBChart;
 
   })(HTMLElement);
 
-  window.KDB = {};
+  if (window.KDB == null) {
+    window.KDB = {};
+  }
 
   KDB.KDBChart = document.registerElement('kdb-chart', {
     prototype: _KDBChart.prototype

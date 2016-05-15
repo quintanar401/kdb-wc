@@ -44,6 +44,7 @@ Example:
 Supported attributes:
 * `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml`, `txt`.
 * `k-srv-type` - optional, ws or http (default).
+* `f-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
 * `k-srv-uri` - optional, target websocket server. Format: "host:port". By default it is the current web server.
 * `k-srv-user` - optional, a user for http requests.
 * `k-srv-pass` - optional, a password for http requests.
@@ -68,9 +69,9 @@ Example:
  `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
 ```
 
-You can provide parameters to the query by using $paramKID$ format. All such entries will be substituted with the target value. Supported targets include `select`, `textarea`, `input` with types `text`, `password`, `radio`, `checkbox` and any other element with the meaningful textContent (`span` for example). Also you can use $i$ to refer to the number of executions if `k-interval` is set.
+You can provide parameters to the query by using $paramKID$ format. All such entries will be substituted with the target value. Supported targets include `select`, `textarea`, `input` with types `text`, `password`, `radio`, `checkbox` and any other element with the meaningful textContent (`span` for example). Also you can use $i$ to refer to the number of executions (can be useful with `k-interval`).
 
-`kdb-query` can update other elements with its result. The result should have the correct format - string for text elements, list of objects (table) for `kdb-table` and `kdb-chart`, string array for `select`. It can also update any element that has `kdbUpd` function.
+`kdb-query` can update other elements with its result. The result should have the correct format - string for text elements, list of objects (table) for `kdb-table` and `kdb-chart`, string array for `select` or `datalist`. It can also update any element that has `kdbUpd` function.
 
 Supported attributes:
 * `k-query` - optional, a query can be set either in this attribute or between the tags like in the example above.
@@ -78,7 +79,7 @@ Supported attributes:
 * `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button - execute on click.
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or you can provide their `k-id` in this attribute, in this way you can update arbitrary html elements.
 * `k-delay` - optional, in millis. With `timer` sets the delay for the first execution.
-* `k-interval` - optional, in millis. With `timer` causes query to rerun every `interval` millis. The first query will be executed with the delay of either `k-delay` or this `interval`.
+* `k-interval` - optional, in millis. With `timer` causes query to rerun every `interval` millis. The first query will be executed with the delay of either `k-delay` or this `k-interval`.
 * `k-escape-q` - optional. If set forces `kdb-query` to escape " and \\ symbols in the query parameters (not query itself!).
 * `k-id` - optional, this id can be used to link other components to this one.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
@@ -140,13 +141,38 @@ Supported attributes:
 * `k-query` - optional, `k-id` link to `kdb-query` or query text itself. If it is not present the content of the tag is used.
 * `k-class` - optional, classes to pass to the wrapper.
 * `k-style` - optional, style to set to the wrapper.
-* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc.
+* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc. `use-config` can be used to use the `k-config`, `merge-config` - merge the default config with `k-config`. In the previous two cases set the chart type manually in `k-config`.
 * `k-time-col` - optional, time column.
 * `k-data-cols` - optional, data columns.
+* `k-config` - optional, either a chart config in JSON format or js name of a variable with the binary config.
 * `k-flow` - optional, if true the chart will be updated with the new data on every update. See examples and C3 flow help/example.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
+## KDBLex
+
+Converts Q text into an array of tokens. It also can produce html from the text.
+
+KDBLex instance is available as KDB.KDBLexer. It can be used with `kdb-query` in `k-filter` attribute to colorify q text.
+
+```
+l = new KDB.KDBLex() || KDB.KDBLexer
+l.getHtml("a: 100")
+
+Suitable container div:
+<div style="line-height:normal;text-autospace:none;font-size: 8pt; font-family: Consolas; white-space: nowrap;"></div>
+```
+
+Functions:
+* `getTokens(text or array of strings)` - get tokens array.
+* `getHtml(text or array of strings, map of token types to css classes or null)` - produce html from text where tokens are wrapped in `span` with the corresponding classes, lines are wrapped in `div`.
+* `filter(text)` - to be used with `kdb-query` to post process q text into colored html.
+
+Default types (classes): `k-const`, `k-number-guid`, `k-number-float`, `k-number-int`, `k-number-datetime`, `k-number-time`, `k-number-date`, `k-const-sym`, `k-keyword-language`, `k-command`, `k-keyword-function`, `k-keyword-control`, `k-keyword-operator`, `k-name`, `k-variable`, `k-comment`, `k-simple-comment`, `k-eof-comment`, `k-string`, `k-text`, `k-operator`.
+
+## srv.q
+
+A simple proxy server for html components. It has .z.ph and .z.ws handlers and can forward requests to other servers (via `k-target` attribute on `kdb-srv`). You can update trgMap dictionary in srv.q with logical names (trgMap[\`hdbEMEAstock]:\`:somehost:port) and then set `k-target` like `k-target="hdbEMEAstock"`.
 
 # Examples
 

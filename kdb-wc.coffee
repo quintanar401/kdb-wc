@@ -41,6 +41,7 @@ class _KDBSrv extends HTMLElement
     @debug = @attributes['debug']?.textContent || null
     @rType = @attributes['k-return-type']?.textContent || "json"
     @fixJson = @attributes['fix-json']?.textContent || null
+    @kFeed = (@attributes['k-feed']?.textContent || "false") is "true"
     @hidden = true
     @ws = @wsReq = null
     @wsQueue = []
@@ -78,7 +79,7 @@ class _KDBSrv extends HTMLElement
     @processWSQueue() if @ws.readyState is 1
   sendWSRes: (r,e) ->
     return unless req=@wsReq
-    @wsReq = null
+    @wsReq = null unless @kFeed
     try
       req.cb r,e
     catch err
@@ -148,15 +149,19 @@ class _KDBQuery extends HTMLElement
     @debug = @attributes['debug']?.textContent || null
     @escapeQ = @attributes['k-escape-q']?.textContent || ""
     @updObjs = @attributes['k-update-elements']?.textContent.split(' ').filter((e)-> e.length > 0) || []
-    @kInterval = Number.parseInt(@attributes['k-interval']?.textContent || "0")
-    @kDelay = Number.parseInt(@attributes['k-delay']?.textContent || "0")
+    @kInterval = @attributes['k-interval']?.textContent || "0"
+    @kInterval = if Number.parseInt then Number.parseInt @kInterval else Number @kInterval
+    @kDelay = @attributes['k-delay']?.textContent || "0"
+    @kDelay = if Number.parseInt then Number.parseInt @kDelay else Number @kDelay
+    if @kFilter = @attributes['k-filter']?.textContent
+      @kFilter = @kFilter.split(".").reduce ((x,y) -> return x[y]), window
     @result = null
     if 'load' in @exec and (!prvExec or !('load' in prvExec))
       if document.readyState in ['complete','interactive']
         setTimeout (=> @runQuery()), 100
       else
         document.addEventListener "DOMContentLoaded", (ev) => @runQuery()
-    for el in @exec when !(el in ['load','manual'])
+    for el in @exec when !(el in ['load','manual','timer'])
       @addUpdater v if v = document.querySelector "[k-id='#{el}']"
     @kRefs = @query.match(/\$\w+\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
@@ -175,6 +180,7 @@ class _KDBQuery extends HTMLElement
       @iterationNumber += 1
       console.log "kdb-query: got response with status #{e}" if @debug
       if !e
+        r = (if typeof @kFilter is 'object' then @kFilter.filter r else @kFilter r) if @kFilter
         @result = r
         @sendEv()
         @updateObjects()
@@ -191,6 +197,8 @@ class _KDBQuery extends HTMLElement
   addUpdater: (v) ->
     if v.nodeName is 'BUTTON'
       v.addEventListener 'click', (ev) => @rerunQuery()
+    else
+      v.addEventListener 'click', (ev) => @kLastEvent = ev; @rerunQuery()
   updateObjects: -> @updateObj document.querySelector "[k-id='#{o}']" for o in @updObjs
   updateObj: (o) ->
     return unless o
@@ -200,17 +208,21 @@ class _KDBQuery extends HTMLElement
       catch err
         console.log "kdb-query:exception in kdbUpd"
         console.log err
-    else if o.nodeName is 'SELECT'
+    else if o.nodeName in ['SELECT','DATALIST']
       o.innerHTML = ''
       for e,i in @result
         opt = document.createElement 'option'
-        opt.value = i
+        opt.value = e.toString()
         opt.text = e.toString()
-        o.add opt
+        o.appendChild opt
     else
       a = o.attributes['k-append']?.textContent || 'overwrite'
+      ty = o.attributes['k-content-type']?.textContent || 'text'
       s = if o.textContent then '\n' else ''
-      if a is 'top' then o.textContent = @result.toString()+s+o.textContent else if a is 'bottom' then o.textContent += s+@result.toString() else o.textContent = @result.toString()
+      if ty is 'text'
+        if a is 'top' then o.textContent = @result.toString()+s+o.textContent else if a is 'bottom' then o.textContent += s+@result.toString() else o.textContent = @result.toString()
+      else
+        if a is 'top' then o.innerHTML = @result.toString()+s+o.innerHTML else if a is 'bottom' then o.innerHTML += s+@result.toString() else o.innerHTML = @result.toString()
   resolveRefs: (q)->
     return q unless @kRefs
     if !@kMap
@@ -219,12 +231,12 @@ class _KDBQuery extends HTMLElement
       @kMap[e] = document.querySelector "[k-id='#{e}']" for e of @kMap
     for n,v of @kMap
       if !v
-        if n is "i" then txt = @iterationNumber.toString() else txt = n
+        txt = if n is "i" then @iterationNumber.toString() else if n is 'txt' then @kLastEvent.target?.textContent else n
       else
         txt = extractInfo v
       q = q.replace (new RegExp "\\$#{n}\\$", "g"), @escape txt
     q
-  escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"') else s
+  escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\240/g," ") else s
 
 class _KDBTable extends HTMLElement
   createdCallback: ->
@@ -336,11 +348,7 @@ class _KDBChart extends HTMLElement
       return unless @kConfig and typeof r is 'object'
       return if r.length is 0
       console.log "kdb-chart: will use provided cfg" if @debug
-      try
-        cfg = JSON.parse @kConfig
-      catch err
-        console.log "kdb-chart: config parse exception"
-        return console.log err
+      cfg = @getConfig @kConfig
       cfg.data.rows = @convertAllTbl r
       @chSrc = 'user'
     else if typeof r is 'object' and r.data
@@ -365,6 +373,8 @@ class _KDBChart extends HTMLElement
           rows: @convertTbl r,tm,dt
           type: @kChType
           xFormat: fmt
+        point:
+          show: false
         axis:
           x:
             type: 'timeseries'
@@ -383,12 +393,7 @@ class _KDBChart extends HTMLElement
       @chSrc = 'dict'
     if @kChType is 'merge-config'
       console.log "kdb-chart: will merge cfgs" if @debug
-      try
-        cfg2 = JSON.parse @kConfig
-      catch err
-        console.log "kdb-chart: config parse exception"
-        return console.log err
-      cfg = @mergeCfgs cfg, cfg2
+      cfg = @mergeCfgs cfg, @getConfig @kConfig
     console.log "kdb-chart: cfg is" if @debug
     console.log cfg if @debug
     return @updateChartWithData cfg
@@ -460,8 +465,23 @@ class _KDBChart extends HTMLElement
       continue if c1[n]
       c1[n] = v
     c1
+  copyCfg: (c) ->
+    cc = {}
+    for n,v of c
+      if typeof v is 'object' and !v.length
+        cc[n] = @copyCfg v
+      else
+        cc[n] = v
+    cc
+  getConfig: (c) ->
+    return @copyCfg (c.split(".").reduce ((x,y) -> return x[y]), window) if /^[\w\.]+$/.test c
+    try
+      cfg = JSON.parse c
+    catch err
+      console.log "kdb-chart: config parse exception"
+      return console.log err
 
-window.KDB = {}
+window.KDB ?= {}
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
 KDB.KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
 KDB.KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)

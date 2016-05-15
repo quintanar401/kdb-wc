@@ -26,7 +26,7 @@
   <kdb-chart k-style='width:800px;height:400px;' k-id="c1"></kdb-chart>
 
   <p>You can also set time and data columns explicitly and change the chart type.</p>
-  <kdb-query k-update-elements='c2 c5'>update ask:bid+0.1+0.1*30?5 from ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+sums -0.5+30?2)</kdb-query>
+  <kdb-query k-update-elements='c2 c5 c6'>update ask:bid+0.1+0.1*30?5 from ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+sums -0.5+30?2)</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-time-col="time" k-data-cols="ask bid" k-chart-type="spline"></kdb-chart>
 
   <p>If the query value is a dictionary then pie or donut or gauge type can be used (pie by default).</p>
@@ -38,9 +38,12 @@
   <kdb-chart k-style='width:800px;height:400px;' k-chart-type="use-config"
      k-config='{"axis":{"x":{"type":"timeseries","tick":{"format":"%H:%M:%S.%L"}}},"data":{"type":"spline","x":"time"}}' k-id="c4"></kdb-chart>
 
-   <p>User config can be merged into the calculate cfg. Here rotate is added to the previous example.</p>
-  <kdb-chart k-style='width:800px;height:400px;' k-id="c5" k-time-col="time" k-data-cols="ask bid" debug="true"
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c5" k-time-col="time" k-data-cols="ask bid"
     k-chart-type="merge-config" k-config='{"data":{"type":"spline"},"axis":{"x":{"tick":{"rotate":30}}}}'></kdb-chart>
+
+  <script>KDB.jscfg = { data: { type: 'spline'}, point: { show: true }, axis: { x: { tick: { rotate:45 } } } }</script>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c6" k-time-col="time" k-data-cols="ask bid" debug="true"
+    k-chart-type="merge-config" k-config='KDB.jscfg'></kdb-chart>
 
 </body>
 </html>
