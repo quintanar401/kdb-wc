@@ -38,9 +38,11 @@
   <kdb-chart k-style='width:800px;height:400px;' k-chart-type="use-config"
      k-config='{"axis":{"x":{"type":"timeseries","tick":{"format":"%H:%M:%S.%L"}}},"data":{"type":"spline","x":"time"}}' k-id="c4"></kdb-chart>
 
+  <p>User config can be merged into the calculated cfg. Here rotate is added to the previous example.</p>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c5" k-time-col="time" k-data-cols="ask bid"
     k-chart-type="merge-config" k-config='{"data":{"type":"spline"},"axis":{"x":{"tick":{"rotate":30}}}}'></kdb-chart>
 
+  <p>User config can be merged into the calculated cfg: config can be defined by a link to the config object. Useful when the config is shared, too complicated or contains functions.</p>
   <script>KDB.jscfg = { data: { type: 'spline'}, point: { show: true }, axis: { x: { tick: { rotate:45 } } } }</script>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c6" k-time-col="time" k-data-cols="ask bid" debug="true"
     k-chart-type="merge-config" k-config='KDB.jscfg'></kdb-chart>
