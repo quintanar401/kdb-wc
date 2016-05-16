@@ -301,6 +301,8 @@ class _KDBChart extends HTMLElement
     @kCont = document.createElement 'div'
     @kCont.className = kClass
     @kCont.style.cssText = kStyle
+    @kDygraph = /^dygraph/.test @kChType
+    @kChType = @kChType.match(/^dygraph-(.*)$/)?[1] || 'line' if @kDygraph
     this.appendChild @kCont
     console.log "kdb-chart: query:#{@query}, type:#{@kChType}, cfg:#{@kConfig}" if @debug
   attachedCallback: ->
@@ -329,7 +331,58 @@ class _KDBChart extends HTMLElement
     console.log "kdb-chart: got update" if @debug
     console.log r if @debug
     @updateChart r
+  updateDyChart: (r) ->
+    if @chart and @kFlow
+      console.log "Flow update" if @debug
+      data = r if @chSrc is 'dy'
+      data = @convertDyAllTbl r if @chSrc is 'user'
+      data = (@convertDyTbl r,@dtCfg.time,@dtCfg.data)[1] if @chSrc is 'auto'
+      console.log data if @debug
+      @dyData = (@dyData.concat data).slice data.length
+      return @chart.updateOptions file: @dyData
+    if @kChType is 'use-config'
+      return unless @kConfig and typeof r is 'object'
+      return if r.length is 0
+      console.log "kdb-chart: will use provided cfg" if @debug
+      cfg = @getConfig @kConfig
+      data = @convertDyAllTbl r
+      @chSrc = 'user'
+    else
+      if typeof r is 'object' and r.length is 2 and (r[0] instanceof Array or typeof r[0] is 'string') # raw config
+        console.log 'kdb-chart: raw config' if @debug
+        data = r[0]
+        cfg = r[1]
+        @chSrc = 'dy'
+      else
+        console.log "Will detect the user format" if @debug
+        return unless tm = @detectTime r[0]
+        console.log "Time is #{tm}" if @debug
+        dt = @detectData r[0]
+        console.log "Data is #{dt}" if @debug
+        @dtCfg = data: dt, time: tm
+        return if dt.length is 0
+        r = @convertDyTbl r,tm,dt
+        data = r[1]
+        cfg = labels: r[0]
+        @chSrc = 'auto'
+    if @kChType is 'merge-config'
+      console.log "kdb-chart: will merge cfgs" if @debug
+      cfg = @mergeCfgs cfg, @getConfig @kConfig
+    if typeof data is 'string'
+      cfg = @mergeCfgs cfg,
+        xValueParser: (d) => @convDyTime d
+        axes:
+          x:
+            valueFormatter: Dygraph.dateString_
+            ticker: Dygraph.dateTicker
+    console.log "kdb-chart: cfg is" if @debug
+    console.log cfg if @debug
+    console.log data if @debug
+    @dyData = data if @kFlow
+    return @updateDyChartWithData data,cfg
+  updateDyChartWithData: (d,c) -> @chart = new Dygraph @kCont,d,c
   updateChart: (r) ->
+    return @updateDyChart r if @kDygraph
     if @chart and @kFlow
       if @chSrc is 'c3'
         return @updateFlowWithData r
@@ -409,6 +462,14 @@ class _KDBChart extends HTMLElement
     for rec in t
       rows.push ((if n is tm then @convTime(rec[n]) else rec[n]) for n in cols)
     rows
+  convertDyTbl: (t,tm,dt) ->
+    cols = [tm]
+    for n of t[0]
+      cols.push n if n in dt
+    rows = []
+    for rec in t
+      rows.push ((if n is tm then @convDyTime(rec[n]) else rec[n]) for n in cols)
+    [cols,rows]
   convertAllTbl: (t) ->
     t = [t] unless t.length
     cols = []; fmts = []
@@ -418,6 +479,13 @@ class _KDBChart extends HTMLElement
     rows = [cols]
     for rec in t
       rows.push ((if fmts[n] then (fmts[n].parse @convTime rec[n]) else rec[n]) for n in cols)
+    rows
+  convertDyAllTbl: (t) ->
+    t = [t] unless t.length
+    rows = []
+    cols = (n for n of t[0])
+    for rec in t
+      rows.push ((if i is 0 then @convDyTime(rec[n]) else rec[n]) for n,i in cols)
     rows
   detectData: (r) ->
     return @kData if @kData
@@ -454,6 +522,14 @@ class _KDBChart extends HTMLElement
     d = d.slice(0,-6) unless d[d.length-4] is "."
     d = d.replace('.','-').replace('.','-') if d[4] is '.'
     d.replace('D','T')
+  convDyTime: (d) ->
+    return d unless typeof d is 'string'
+    return Number d unless 0<=d.indexOf(':') or (d[4] is '.' and d[7] is '.') or d[4] is '-'
+    d = d.replace('.','-').replace('.','-') if d[4] is '.' # make date like 2010-10-10
+    d = d.replace('D','T') if 0<=d.indexOf "D" # change D to T
+    d = d.match(/^\d+T(.*)$/)[1] unless d[4] is '-' or d[2] is ':' # timespan - remove span completely
+    d = "2000-01-01T"+d if d[2] is ':'
+    new Date d
   mergeCfgs: (c1,c2) ->
     for n,v of c1
       continue unless v2 = c2[n]

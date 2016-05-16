@@ -1,3 +1,6 @@
+## 0.6.0
+* add dygraph charts
+
 ## 0.5.0
 * live websockets
 * lexer

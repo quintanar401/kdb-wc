@@ -23,6 +23,7 @@ Some other libraries may be needed:
 * [`c.js`](http://code.kx.com/wsvn/code/kx/kdb%2B/c/c.js) - serialization/deserialization of KDB objects for Websocket.
 * [`c3`](http://c3js.org) - charts library C3.
 * [`d3`](https://d3js.org/) - charts library D3 (C3 is based on it).
+* [`dygraph`](http://dygraphs.com) - another charts library for timeseries.
 
 All libraries can be found in `external` directory.
 
@@ -113,7 +114,7 @@ Supported attributes:
 ## kdb-chart
 
 `kdb-chart` can be used to visualize data. It can work in the following modes:
-* You can provide the full correct C3 config. Absolutely all C3 features are available. See chart example.
+* You can provide the full correct C3 config. Absolutely all C3 features are available. See chart examples.
 * If the result is a table `kdb-chart` can determine params (time and data) itself. If it succeeds it will create a timeseries chart.
 * If the result is a table you can also set explicitly data and time columns and line type.
 * If the result is a dictionary `kdb-chart` will create a pie chart (type can be changed to donut or gauge).

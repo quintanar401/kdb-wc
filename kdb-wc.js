@@ -653,7 +653,7 @@
     }
 
     _KDBChart.prototype.createdCallback = function() {
-      var kClass, kStyle, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
+      var kClass, kStyle, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srv = ((ref = this.attributes['k-srv']) != null ? ref.textContent : void 0) || "";
       this.query = ((ref1 = this.attributes['k-query']) != null ? ref1.textContent : void 0) || this.textContent;
       this.debug = ((ref2 = this.attributes['debug']) != null ? ref2.textContent : void 0) || null;
@@ -672,6 +672,10 @@
       this.kCont = document.createElement('div');
       this.kCont.className = kClass;
       this.kCont.style.cssText = kStyle;
+      this.kDygraph = /^dygraph/.test(this.kChType);
+      if (this.kDygraph) {
+        this.kChType = ((ref10 = this.kChType.match(/^dygraph-(.*)$/)) != null ? ref10[1] : void 0) || 'line';
+      }
       this.appendChild(this.kCont);
       if (this.debug) {
         return console.log("kdb-chart: query:" + this.query + ", type:" + this.kChType + ", cfg:" + this.kConfig);
@@ -742,8 +746,124 @@
       return this.updateChart(r);
     };
 
+    _KDBChart.prototype.updateDyChart = function(r) {
+      var cfg, data, dt, tm;
+      if (this.chart && this.kFlow) {
+        if (this.debug) {
+          console.log("Flow update");
+        }
+        if (this.chSrc === 'dy') {
+          data = r;
+        }
+        if (this.chSrc === 'user') {
+          data = this.convertDyAllTbl(r);
+        }
+        if (this.chSrc === 'auto') {
+          data = (this.convertDyTbl(r, this.dtCfg.time, this.dtCfg.data))[1];
+        }
+        if (this.debug) {
+          console.log(data);
+        }
+        this.dyData = (this.dyData.concat(data)).slice(data.length);
+        return this.chart.updateOptions({
+          file: this.dyData
+        });
+      }
+      if (this.kChType === 'use-config') {
+        if (!(this.kConfig && typeof r === 'object')) {
+          return;
+        }
+        if (r.length === 0) {
+          return;
+        }
+        if (this.debug) {
+          console.log("kdb-chart: will use provided cfg");
+        }
+        cfg = this.getConfig(this.kConfig);
+        data = this.convertDyAllTbl(r);
+        this.chSrc = 'user';
+      } else {
+        if (typeof r === 'object' && r.length === 2 && (r[0] instanceof Array || typeof r[0] === 'string')) {
+          if (this.debug) {
+            console.log('kdb-chart: raw config');
+          }
+          data = r[0];
+          cfg = r[1];
+          this.chSrc = 'dy';
+        } else {
+          if (this.debug) {
+            console.log("Will detect the user format");
+          }
+          if (!(tm = this.detectTime(r[0]))) {
+            return;
+          }
+          if (this.debug) {
+            console.log("Time is " + tm);
+          }
+          dt = this.detectData(r[0]);
+          if (this.debug) {
+            console.log("Data is " + dt);
+          }
+          this.dtCfg = {
+            data: dt,
+            time: tm
+          };
+          if (dt.length === 0) {
+            return;
+          }
+          r = this.convertDyTbl(r, tm, dt);
+          data = r[1];
+          cfg = {
+            labels: r[0]
+          };
+          this.chSrc = 'auto';
+        }
+      }
+      if (this.kChType === 'merge-config') {
+        if (this.debug) {
+          console.log("kdb-chart: will merge cfgs");
+        }
+        cfg = this.mergeCfgs(cfg, this.getConfig(this.kConfig));
+      }
+      if (typeof data === 'string') {
+        cfg = this.mergeCfgs(cfg, {
+          xValueParser: (function(_this) {
+            return function(d) {
+              return _this.convDyTime(d);
+            };
+          })(this),
+          axes: {
+            x: {
+              valueFormatter: Dygraph.dateString_,
+              ticker: Dygraph.dateTicker
+            }
+          }
+        });
+      }
+      if (this.debug) {
+        console.log("kdb-chart: cfg is");
+      }
+      if (this.debug) {
+        console.log(cfg);
+      }
+      if (this.debug) {
+        console.log(data);
+      }
+      if (this.kFlow) {
+        this.dyData = data;
+      }
+      return this.updateDyChartWithData(data, cfg);
+    };
+
+    _KDBChart.prototype.updateDyChartWithData = function(d, c) {
+      return this.chart = new Dygraph(this.kCont, d, c);
+    };
+
     _KDBChart.prototype.updateChart = function(r) {
       var cfg, d, dt, fmt, n, ref, t, tbl, tm, v, xfmt;
+      if (this.kDygraph) {
+        return this.updateDyChart(r);
+      }
       if (this.chart && this.kFlow) {
         if (this.chSrc === 'c3') {
           return this.updateFlowWithData(r);
@@ -914,6 +1034,30 @@
       return rows;
     };
 
+    _KDBChart.prototype.convertDyTbl = function(t, tm, dt) {
+      var cols, j, len, n, rec, rows;
+      cols = [tm];
+      for (n in t[0]) {
+        if (indexOf.call(dt, n) >= 0) {
+          cols.push(n);
+        }
+      }
+      rows = [];
+      for (j = 0, len = t.length; j < len; j++) {
+        rec = t[j];
+        rows.push((function() {
+          var k, len1, results;
+          results = [];
+          for (k = 0, len1 = cols.length; k < len1; k++) {
+            n = cols[k];
+            results.push(n === tm ? this.convDyTime(rec[n]) : rec[n]);
+          }
+          return results;
+        }).call(this));
+      }
+      return [cols, rows];
+    };
+
     _KDBChart.prototype.convertAllTbl = function(t) {
       var cols, f, fmts, j, len, n, rec, ref, rows, v;
       if (!t.length) {
@@ -938,6 +1082,35 @@
           for (k = 0, len1 = cols.length; k < len1; k++) {
             n = cols[k];
             results.push(fmts[n] ? fmts[n].parse(this.convTime(rec[n])) : rec[n]);
+          }
+          return results;
+        }).call(this));
+      }
+      return rows;
+    };
+
+    _KDBChart.prototype.convertDyAllTbl = function(t) {
+      var cols, i, j, len, n, rec, rows;
+      if (!t.length) {
+        t = [t];
+      }
+      rows = [];
+      cols = (function() {
+        var results;
+        results = [];
+        for (n in t[0]) {
+          results.push(n);
+        }
+        return results;
+      })();
+      for (j = 0, len = t.length; j < len; j++) {
+        rec = t[j];
+        rows.push((function() {
+          var k, len1, results;
+          results = [];
+          for (i = k = 0, len1 = cols.length; k < len1; i = ++k) {
+            n = cols[i];
+            results.push(i === 0 ? this.convDyTime(rec[n]) : rec[n]);
           }
           return results;
         }).call(this));
@@ -1038,6 +1211,28 @@
         d = d.replace('.', '-').replace('.', '-');
       }
       return d.replace('D', 'T');
+    };
+
+    _KDBChart.prototype.convDyTime = function(d) {
+      if (typeof d !== 'string') {
+        return d;
+      }
+      if (!(0 <= d.indexOf(':') || (d[4] === '.' && d[7] === '.') || d[4] === '-')) {
+        return Number(d);
+      }
+      if (d[4] === '.') {
+        d = d.replace('.', '-').replace('.', '-');
+      }
+      if (0 <= d.indexOf("D")) {
+        d = d.replace('D', 'T');
+      }
+      if (!(d[4] === '-' || d[2] === ':')) {
+        d = d.match(/^\d+T(.*)$/)[1];
+      }
+      if (d[2] === ':') {
+        d = "2000-01-01T" + d;
+      }
+      return new Date(d);
     };
 
     _KDBChart.prototype.mergeCfgs = function(c1, c2) {

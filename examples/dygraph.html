@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <link href="../external/c3.min.css" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script src="../external/dygraph-combined.js"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>Dygraph charts.</p>
+  <kdb-srv k-srv-type="ws" k-return-type="q" debug="true"></kdb-srv>
+  <kdb-srv k-id='s2' fix-json="true"></kdb-srv>
+
+  <p>Data is sent via binary ws in the raw format: (data;options dictionary). Dygraph cfg is much simpler than C3 so you may always use the native format.</p>
+  <kdb-query k-update-elements='c1'>(flip value flip update bid:ask+0.5+200?2 from ([] time:10:00:00+til 200; ask:50.0+sums 0.5-200?2);`rollPeriod`showRoller`labels!(5;1b;("time";"ask";"bid")))</kdb-query>
+  <kdb-chart k-chart-type="dygraph" k-style='width:800px;height:400px;' k-id="c1"></kdb-chart>
+
+  <p>You can send data in csv format too. kdb-chart adds a date parsing function that will convert Q datetimes.</p>
+  <kdb-query k-update-elements='c2'>("\n"sv csv 0: update bid:ask+0.5+200?2 from ([] time:10:00:00+til 200; ask:50.0+sums 0.5-200?2);`rollPeriod`showRoller!(5;1b))</kdb-query>
+  <kdb-chart k-chart-type="dygraph" k-style='width:800px;height:400px;' k-id="c2"></kdb-chart>
+
+  <br>
+  <br>
+  <br>
+  <p>You can provide a table as is. kdb-chart will detect columns.</p>
+  <kdb-query k-srv="s2" k-update-elements='c3'>([] price:50.0+sums 0.5-200?2; time:.z.P+(til 200)+00:00:01)</kdb-query>
+  <kdb-chart k-chart-type="dygraph" k-style='width:800px;height:400px;' k-id="c3"></kdb-chart>
+
+  <p>You can provide a table as is with columns.</p>
+  <kdb-query k-srv="s2" k-update-elements='c4 c5 c6'>update bid:ask+0.5+200?2 from ([] time:10:00:00+til 200; ask:50.0+sums 0.5-200?2)</kdb-query>
+  <kdb-chart k-chart-type="dygraph" k-data-cols="ask bid" k-time-col="time" k-style='width:800px;height:400px;' k-id="c4"></kdb-chart>
+
+  <p>dygraph-use-config option:</p>
+  <kdb-chart k-chart-type="dygraph-use-config" k-style='width:800px;height:400px;' k-id="c5"
+     k-config='{"rollPeriod":5, "showRoller":true, "labels":["Time","Ask Price","Bid Price"]}'></kdb-chart>
+
+  <p>dygraph-merge-config option:</p>
+  <kdb-chart k-chart-type="dygraph-merge-config" k-style='width:800px;height:400px;' k-id="c6" k-data-cols="ask bid" k-time-col="time"
+     k-config='{"rollPeriod":5, "showRoller":true}'></kdb-chart>
+  
+  <p>Flow setting can be used with dygraph as well:</p>
+  <kdb-query k-update-elements='c7' k-execute-on="timer" k-delay="1"
+     k-interval="2000">`time xasc([] time:.z.T-00:00:00.400*til $[$i$;5;200]; price:50+sums -0.5+$[$i$;5;200]?2)</kdb-query>
+  <kdb-chart k-chart-type="dygraph-merge-config" k-style='width:800px;height:400px;' k-id="c7" k-flow="true"
+     k-data-cols="price" k-time-col="time" k-config='{"rollPeriod":5, "showRoller":true}'></kdb-chart>
+
+</body>
+</html>
