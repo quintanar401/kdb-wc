@@ -1,3 +1,7 @@
+## 0.7.0
+* add jsGrid tables
+* add kdb-editor (based on ace)
+
 ## 0.6.0
 * add dygraph charts
 

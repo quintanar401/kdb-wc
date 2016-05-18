@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+
+
+
+    <link type="text/css" rel="stylesheet" href="../external/jsgrid.min.css" />
+    <link type="text/css" rel="stylesheet" href="../external/jsgrid-theme.min.css" />
+       
+    <script type="text/javascript" src="../external/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="../external/jsgrid.min.js"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>jsGrid library can be used for tables.</p>
+  <kdb-srv fix-json="true"></kdb-srv>
+  <kdb-srv k-id="s2" k-srv-type="ws" k-return-type="q"></kdb-srv>
+
+  <p>Visualize a table as is. Sorting is on by default. Paging is on for large tables.</p>
+  <kdb-query k-update-elements="tbl">([] time:.z.T+til[500]*00:00:10; price: 500?40*50?1.0; cancelled:500?0b)</kdb-query>
+  <kdb-table k-id="tbl" k-lib="jsgrid" k-style="width:800px; height: 400px;"></kdb-table>
+
+  <p>Use k-search option to add filtering.</p>
+  <kdb-query k-srv="s2" k-update-elements="tbl2 tbl3">([] time:.z.P+til[500]*00:00:10; price: 500?40*50?1.0; flag:500?`3)</kdb-query>
+  <kdb-table k-id="tbl2" k-lib="jsgrid" k-search="true" k-style="width:800px; height: 400px;"></kdb-table>
+
+  <p>Overwrite the default cfg with k-config option (remove the header for example).</p>
+  <kdb-table k-id="tbl3" k-lib="jsgrid" k-config='{"sorting": false, "heading":false}' k-style="width:800px; height: 400px;"></kdb-table>
+</body>
+</html>

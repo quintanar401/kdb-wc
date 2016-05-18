@@ -26,9 +26,38 @@ extractInfo = (v) ->
       txt = v?.value || 'unsupported'
   else if v.nodeName is 'TEXTAREA'
     txt = v.value
+  else if v.nodeName is 'KDB-EDITOR'
+    txt = v.kEditor.getValue()
   else
     txt = v.textContent
   txt
+
+mergeCfgs = (c1,c2) ->
+  for n,v of c1
+    continue if (v2 = c2[n]) is undefined
+    if typeof v2 is 'object' and typeof v is 'object' and !v2.length and !v.length
+      c1[n] = mergeCfgs v, v2
+    else
+      c1[n] = v2
+  for n,v of c2
+    continue if c1[n]
+    c1[n] = v
+  c1
+copyCfg = (c) ->
+  cc = {}
+  for n,v of c
+    if typeof v is 'object' and !v.length
+      cc[n] = copyCfg v
+    else
+      cc[n] = v
+  cc
+getConfig = (c) ->
+  return copyCfg (c.split(".").reduce ((x,y) -> return x[y]), window) if /^[\w\.]+$/.test c
+  try
+    cfg = JSON.parse c
+  catch err
+    console.log "kdb-wc: config parse exception"
+    return console.log err
 
 class _KDBSrv extends HTMLElement
   createdCallback: ->
@@ -72,7 +101,7 @@ class _KDBSrv extends HTMLElement
         try
           res = if @rType is "json" and typeof e.data is 'string' then JSON.parse e.data else if typeof e.data is 'object' then deserialize(e.data) else e.data
         catch error
-          console.log "kdb-srv-ws: exception in ws parse #{error}" if @debug
+          console.error "kdb-srv-ws: exception in ws parse #{error}"
           return @sendWSRes null, "result parse error: "+error.toString()
         @sendWSRes res, null
       return
@@ -83,7 +112,7 @@ class _KDBSrv extends HTMLElement
     try
       req.cb r,e
     catch err
-      console.log "kdb-srv-ws: exception in callback"
+      console.error "kdb-srv-ws: exception in callback"
       console.log err
     @processWSQueue()
   processWSQueue: ->
@@ -97,7 +126,7 @@ class _KDBSrv extends HTMLElement
         req = ' '+req if typeof req is 'string' and req[0] is '`' # compensate the strange behavior of serialize
         req = serialize req
       catch error
-        console.log "kdb-srv-ws: exception in ws send #{error}" if @debug
+        console.error "kdb-srv-ws: exception in ws send #{error}"
         return @sendWSRes null,'send'
     return @ws.send req if @ws and @ws.readyState is 1
     @sendWS @wsReq.q,@wsReq.cb
@@ -121,12 +150,12 @@ class _KDBSrv extends HTMLElement
       try
         res = if @rType is "json" then JSON.parse xhr.responseText else if @rType is "xml" then xhr.responseXML else xhr.responseText
       catch error
-        console.log "kdb-srv: exception in JSON.parse" if @debug
+        console.error "kdb-srv: exception in JSON.parse"
         return cb null, "JSON.parse error: "+error.toString()
       try
         cb res, null
       catch err
-        console.log "kdb-srv: HTTP callback exception"
+        console.error "kdb-srv: HTTP callback exception"
         console.log err
     q = @qPrefix + encodeURIComponent q
     q = q + "&target=" + extractInfo @target if @target
@@ -242,9 +271,22 @@ class _KDBTable extends HTMLElement
   createdCallback: ->
     @srv = @attributes['k-srv']?.textContent || ""
     @query = @attributes['k-query']?.textContent || @textContent
+    @kLib = @attributes['k-lib']?.textContent || 'table'
     @debug = @attributes['debug']?.textContent || null
     @escHtml = (@attributes['k-escape-html']?.textContent || 'true') == 'true'
+    @kConfig = @attributes['k-config']?.textContent
+    kClass = @attributes['k-class']?.textContent || ""
+    kStyle = @attributes['k-style']?.textContent || ""
+    @kSearch = (@attributes['k-search']?.textContent || 'false') == 'true'
     @inited = false
+    if @kLib is 'jsgrid'
+      @kCont = document.createElement 'div'
+      cont = document.createElement 'div'
+      cont.className = kClass
+      cont.style.cssText = kStyle
+      cont.appendChild @kCont
+      this.appendChild cont
+    console.log "kdb-table: srv: #{@srv}, query: #{@query}, lib:#{@kLib}" if @debug
   attachedCallback: ->
     if !@inited
       console.log "kdb-table: initing" if @debug
@@ -269,7 +311,10 @@ class _KDBTable extends HTMLElement
     @updateTbl ev.detail
   kdbUpd: (r) -> @updateTbl r
   updateTbl: (r) ->
+    console.log "kdb-table: data" if @debug
+    console.log r if @debug
     return if (r.length || 0) is 0
+    return @updateJSGrid r if @kLib is 'jsgrid'
     tbl = "<table class='kdb-table'><tr>"
     tbl += "<th>#{@escapeHtml c}</th>" for c of r[0]
     tbl += "</tr>"
@@ -279,6 +324,49 @@ class _KDBTable extends HTMLElement
       tbl += "</tr>"
     tbl += "</table>"
     @innerHTML = tbl
+  updateJSGrid: (r) ->
+    @kData = r
+    f = []
+    for n,v of r[0]
+      if typeof v is 'string'
+        f.push name:n, type: "text"
+      else if typeof v is 'number'
+        f.push name:n, type: "number"
+      else if typeof v is 'boolean'
+        f.push name:n, type: "checkbox"
+      else if v instanceof Date
+        f.push name:n, type: "text", subtype: 'date', itemTemplate: (v) -> v.toISOString()
+      else
+        f.push name:n, type: "text"
+    cfg =
+      width: '100%'
+      height: '100%'
+      filtering: @kSearch
+      sorting: true
+      paging: r.length>100
+      pageButtonCount: 5
+      pageSize: 50
+      data: r
+      fields: f
+      controller: loadData: (a) => @loadData a
+    cfg = mergeCfgs cfg, getConfig @kConfig if @kConfig
+    @kFields = cfg.fields
+    console.log "kdb-table: cfg" if @debug
+    console.log cfg if @debug
+    $(@kCont).jsGrid cfg
+  loadData: (f) ->
+    return @kData.filter (e) =>
+      r = true
+      for v in @kFields
+        if v.type is "text" and v.subtype is 'date'
+          r = r and (!f[v.name] or -1<e[v.name].toISOString().indexOf f[v.name])
+        else if v.type is "text"
+          r = r and (!f[v.name] or -1<e[v.name].indexOf f[v.name])
+        else if v.type is "number"
+          r = r and (!f[v.name] or 1>Math.abs e[v.name] - f[v.name])
+        else
+          r = r and (f[v.name] is undefined or e[v.name] is f[v.name])
+      r
   escapeHtml: (s) ->
     s = s.toString()
     if @escHtml then s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') else s
@@ -344,7 +432,7 @@ class _KDBChart extends HTMLElement
       return unless @kConfig and typeof r is 'object'
       return if r.length is 0
       console.log "kdb-chart: will use provided cfg" if @debug
-      cfg = @getConfig @kConfig
+      cfg = getConfig @kConfig
       data = @convertDyAllTbl r
       @chSrc = 'user'
     else
@@ -367,9 +455,9 @@ class _KDBChart extends HTMLElement
         @chSrc = 'auto'
     if @kChType is 'merge-config'
       console.log "kdb-chart: will merge cfgs" if @debug
-      cfg = @mergeCfgs cfg, @getConfig @kConfig
+      cfg = mergeCfgs cfg, getConfig @kConfig
     if typeof data is 'string'
-      cfg = @mergeCfgs cfg,
+      cfg = mergeCfgs cfg,
         xValueParser: (d) => @convDyTime d
         axes:
           x:
@@ -401,7 +489,7 @@ class _KDBChart extends HTMLElement
       return unless @kConfig and typeof r is 'object'
       return if r.length is 0
       console.log "kdb-chart: will use provided cfg" if @debug
-      cfg = @getConfig @kConfig
+      cfg = getConfig @kConfig
       cfg.data.rows = @convertAllTbl r
       @chSrc = 'user'
     else if typeof r is 'object' and r.data
@@ -446,7 +534,7 @@ class _KDBChart extends HTMLElement
       @chSrc = 'dict'
     if @kChType is 'merge-config'
       console.log "kdb-chart: will merge cfgs" if @debug
-      cfg = @mergeCfgs cfg, @getConfig @kConfig
+      cfg = mergeCfgs cfg, getConfig @kConfig
     console.log "kdb-chart: cfg is" if @debug
     console.log cfg if @debug
     return @updateChartWithData cfg
@@ -530,35 +618,84 @@ class _KDBChart extends HTMLElement
     d = d.match(/^\d+T(.*)$/)[1] unless d[4] is '-' or d[2] is ':' # timespan - remove span completely
     d = "2000-01-01T"+d if d[2] is ':'
     new Date d
-  mergeCfgs: (c1,c2) ->
-    for n,v of c1
-      continue unless v2 = c2[n]
-      if typeof v2 is 'object' and typeof v is 'object' and !v2.length and !v.length
-        c1[n] = @mergeCfgs v, v2
-      else
-        c1[n] = v2
-    for n,v of c2
-      continue if c1[n]
-      c1[n] = v
-    c1
-  copyCfg: (c) ->
-    cc = {}
-    for n,v of c
-      if typeof v is 'object' and !v.length
-        cc[n] = @copyCfg v
-      else
-        cc[n] = v
-    cc
-  getConfig: (c) ->
-    return @copyCfg (c.split(".").reduce ((x,y) -> return x[y]), window) if /^[\w\.]+$/.test c
-    try
-      cfg = JSON.parse c
-    catch err
-      console.log "kdb-chart: config parse exception"
-      return console.log err
+
+class _KDBEditor extends HTMLElement
+  createdCallback: ->
+    @query = @attributes['k-query']?.textContent
+    @debug = @attributes['debug']?.textContent || null
+    @kConfig = @attributes['k-config']?.textContent
+    kClass = "k-ace-editor "+(@attributes['k-class']?.textContent || "")
+    kStyle = @attributes['k-style']?.textContent || ""
+    @kEditor = null
+    @kCont = document.createElement 'pre'
+    @kCont.className = kClass
+    @kCont.style.cssText = kStyle
+    @kCont.textContent = this.textContent
+    this.innerHTML = ''
+    this.appendChild @kCont
+    console.log "kdb-editor: query: #{@query}" if @debug
+  attachedCallback: ->
+    @kEditor = ace.edit @kCont
+    @setCfg()
+  setCfg: ->
+    cfg =
+      theme: 'ace/theme/textmate'
+      mode: 'ace/mode/q'
+      readOnly: true
+      scrollPastEnd: false
+      fadeFoldWidgets: false
+      behavioursEnabled: true
+      useSoftTabs: true
+      animatedScroll: true
+      verticalScrollBar: false
+      horizontalScrollBar: false
+      highlightSelectedWord: true
+      showGutter: true
+      displayIndentGuides: false
+      showInvisibles: false
+      highlightActiveLine: true
+      selectionStyle: 'line' # line or text - how looks the selection decoration
+      wrap: 'off' # off 40 80 free (til end of box)
+      foldStyle: 'markbegin' # markbegin markbeginend manual
+      fontSize: 12
+      keybindings: 'ace' # ace emacs vim
+      showPrintMargin: true
+      useElasticTabstops: false
+      useIncrementalSearch: false
+    cfg = mergeCfgs cfg, getConfig @kConfig if @kConfig
+    console.log "kdb-editor: config" if @debug
+    console.log cfg if @debug
+    @kEditor.setTheme cfg.theme
+    @kEditor.getSession().setMode cfg.mode
+    @kEditor.setReadOnly cfg.readOnly
+    @kEditor.setOption "scrollPastEnd", cfg.scrollPastEnd
+    @kEditor.setFadeFoldWidgets cfg.fadeFoldWidgets
+    @kEditor.setBehavioursEnabled cfg.behavioursEnabled
+    @kEditor.session.setUseSoftTabs cfg.useSoftTabs
+    @kEditor.setAnimatedScroll cfg.animatedScroll
+    @kEditor.setOption "vScrollBarAlwaysVisible", cfg.verticalScrollBar
+    @kEditor.setOption "hScrollBarAlwaysVisible", cfg.horizontalScrollBar
+    @kEditor.setHighlightSelectedWord cfg.highlightSelectedWord
+    @kEditor.renderer.setShowGutter cfg.showGutter
+    @kEditor.setDisplayIndentGuides cfg.displayIndentGuides
+    @kEditor.setShowInvisibles cfg.showInvisibles
+    @kEditor.setHighlightActiveLine cfg.highlightActiveLine
+    @kEditor.setOption "selectionStyle", cfg.selectionStyle
+    @kEditor.setOption "wrap", cfg.wrap
+    @kEditor.session.setFoldStyle cfg.foldStyle
+    @kEditor.setFontSize cfg.fontSize
+    @kEditor.setKeyboardHandler cfg.keybindings unless cfg.keybindings is 'ace'
+    @kEditor.renderer.setShowPrintMargin cfg.showPrintMargin
+    @kEditor.setOption "useElasticTabstops", cfg.useElasticTabstops if cfg.useElasticTabstops
+    @kEditor.setOption "useIncrementalSearch", cfg.useIncrementalSearch if cfg.useIncrementalSearch
+  kdbUpd: (r) ->
+    return unless typeof r is 'string' or (typeof r is 'obejct' and r.length>0 and typeof r[0] is 'string')
+    @kEditor.setValue r, 0
+    @kEditor.gotoLine 0,0,false
 
 window.KDB ?= {}
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
 KDB.KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
 KDB.KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)
 KDB.KDBTable = document.registerElement('kdb-table', prototype: _KDBTable.prototype)
+KDB.KDBEditor = document.registerElement('kdb-editor', prototype: _KDBEditor.prototype)

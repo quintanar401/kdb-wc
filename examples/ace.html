@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <style type="text/css" media="screen">
+
+    .k-ace-editor {
+        margin: 0;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        overflow: hidden;
+    }
+  </style>
+
+
+
+    <script src="../external/ace.js" type="text/javascript" charset="utf-8"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>Use kdb-editor to show cool Q code.</p>
+  <kdb-srv fix-json="true"></kdb-srv>
+  <kdb-srv k-id="s2" k-srv-type="ws" k-return-type="q"></kdb-srv>
+
+  <p>Read only mode. Static text.</p>
+  <kdb-editor k-style="width:800px; height:250px;">.h.HOME:"./";
+if[not system "p";system "p 5566"]
+system "t 5000"
+
+.h.oldPh:.z.ph;
+
+.z.ph:{-1 "QUERY: ",x:$[type x;x;first x];
+  $[x like"*&target=*";procReq ."&" vs last "?" vs x;.h.oldPh x]}
+
+procReq:{[q;t]
+  t:`$$[(t:7_ t) like "*:*";":",t;t];
+  -1 "REMOTE to ",string t:t^trgMap[t];
+  : .h.hy[`html] first .j.j each getTrg[t] .h.uh q;
+ };
+</kdb-editor>
+
+  <p>Update an editor from a query.</p>
+  <kdb-query k-update-elements="e">{x:(where 100=type each x)#x; "\n"sv string[key x],'":",/:string value x} .Q</kdb-query>
+  <kdb-editor k-id="e" k-style="width:800px; height:250px;"></kdb-editor>
+
+  <p>Change the default settings via k-config (readonly mode for example). kdb-query can use kdb-editor as a source. Enter any expression, press the button and the result will be shown in the editor above</p>
+  <kdb-query k-execute-on="btn" k-update-elements="e" k-escape-q="yes">.Q.s $e2$</kdb-query>
+  <kdb-editor debug="true" k-id="e2" k-config='{"readOnly":false}' k-style="width:800px; height:250px;">{2*x} each til 10</kdb-editor>
+  <button k-id='btn'>Send</button>
+
+</body>
+</html>

@@ -18,12 +18,15 @@ This library is not intended for the production, it lacks any security, robustne
 
 The library should work with IE10 (maybe IE9 too), the latest Firefox and Chrome and probably all other modern browsers.
 
-Some other libraries may be needed:
+Some other libraries may be needed (all with open source licenses like MIT):
 * [`document-register-element.js`](https://github.com/WebReflection/document-register-element) - required if document.registerElement is not supported.
 * [`c.js`](http://code.kx.com/wsvn/code/kx/kdb%2B/c/c.js) - serialization/deserialization of KDB objects for Websocket.
 * [`c3`](http://c3js.org) - charts library C3.
 * [`d3`](https://d3js.org/) - charts library D3 (C3 is based on it).
 * [`dygraph`](http://dygraphs.com) - another charts library for timeseries.
+* [`jsgrid`](http://js-grid.com/) - grid library.
+* [`jquery`](http://jquery.com) - jquery (required by jsgrid).
+* [`ace`](https://github.com/ajaxorg/ace-builds/) - ace editor.
 
 All libraries can be found in `external` directory.
 
