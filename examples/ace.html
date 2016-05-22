@@ -61,8 +61,8 @@ procReq:{[q;t]
 
   <p>kdb-editor can be used as an exec event source for kdb-query. Enter any expression, press Ctrl-E to execute a selection or Ctr-Enter to execute a line and the result will be shown in the editor above.
         </p>
-  <kdb-query k-execute-on="e3" k-update-elements="e2" k-escape-q="yes">.Q.s @[value;"$txt$";{"'",x}]</kdb-query>
   <kdb-editor k-id="e3" k-config='{"readOnly":false}' k-style="width:800px; height:250px;">{2*x} til 10</kdb-editor>
+  <kdb-query k-execute-on="e3" k-update-elements="e2" k-escape-q="yes">.Q.s @[value;"$txt$";{"'",x}]</kdb-query>
 
 </body>
 </html>
