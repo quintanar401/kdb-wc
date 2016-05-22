@@ -35,5 +35,16 @@
 
   <p>Overwrite the default cfg with k-config option (remove the header for example).</p>
   <kdb-table k-id="tbl3" k-lib="jsgrid" k-config='{"sorting": false, "heading":false}' k-style="width:800px; height: 400px;"></kdb-table>
+
+  <p>Add pageLoading:true option to k-config to turn on loading by page. k-query must point to a query that can handle this setting. 
+    When $i$ is 0 (first query) it must return a table with at least 1 row to set correct fields. If $i$ is not 0 it must return a dictionary with 
+    keys `data`itemsCount containing the page data and the total count. The page should be calculated from $start$ - start index, 
+    $size$ - page size, $sortBy$ - sort column if any and $sortOrder$ - asc or desc.
+  </p>
+  <kdb-query k-id="Q" k-srv="s2" k-execute-on="manual">
+   $[$i$;
+    `data`itemsCount!($[`~`$sortBy$;select from a where i within $start$+(0;-1+$size$);select from a where i in (select v:i$sortOrder$ $sortBy$ from a)[`v] $start$+til $size$];count a);
+     [a:([] time:.z.P+til[10000]*00:00:01; price: 10000?40*50?1.0; flag:10000?`2); select[(0;1)] from a]]</kdb-query>
+  <kdb-table k-query="Q" k-id="tbl4" k-lib="jsgrid" k-config='{"pageLoading":true}' k-style="width:800px; height: 400px;"></kdb-table>
 </body>
 </html>

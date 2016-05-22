@@ -1,3 +1,9 @@
+## 0.8.0
+* add dispatch update
+* arguments for queries
+* editor as a source of execs
+* load by page for jsgrid
+
 ## 0.7.0
 * add jsGrid tables
 * add kdb-editor (based on ace)

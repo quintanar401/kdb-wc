@@ -14,6 +14,11 @@ This library is based on the new HTML5 feature - web components - entities that 
 
 This library is not intended for the production, it lacks any security, robustness and etc. It is intended for presentations, prototyping, visualizing datasets.
 
+To use this library include `kdb-wc.js` into your html page:
+```
+<script type="text/javascript" src="kdb-wc.js"></script>
+```
+
 # Requirements
 
 The library should work with IE10 (maybe IE9 too), the latest Firefox and Chrome and probably all other modern browsers.
@@ -42,13 +47,16 @@ Websockets allow you to connect to any server not just the default one. You can 
 
 Example:
 ```
+# default http srv with json format (beware of 3.2 json issue)
+<kdb-srv></kdb-srv>
+# websocket srv with an optional k-srv-uri setting
 <kdb-srv k-srv-type="ws" k-srv-uri="localhost:5566" debug="true"></kdb-srv>
 ```
 
 Supported attributes:
 * `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml`, `txt`.
 * `k-srv-type` - optional, ws or http (default).
-* `f-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
+* `k-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
 * `k-srv-uri` - optional, target websocket server. Format: "host:port". By default it is the current web server.
 * `k-srv-user` - optional, a user for http requests.
 * `k-srv-pass` - optional, a password for http requests.
@@ -63,48 +71,77 @@ Api:
 
 ## kdb-query
 
-`kdb-query` encapsulates a query, searches for its parameters, executes it, distributes the result to its consumers. It can be attached to only one `kdb-srv` but can be used by many data consumers.
+`kdb-query` encapsulates a query, searches for its parameters, executes it, distributes the result to its consumers. It can be attached to only one `kdb-srv` but can be used by many data consumers or data providers.
 
 `kdb-table` and `kdb-chart` components can create `kdb-query` implicitly.
 
 Example:
 ```
-<kdb-query k-id="q1" k-update-elements="pre" debug="true">.Q.s
- `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
+# basic example
+<kdb-query>til 10</kdb-query>
+
+# you can set srv explicitly, assign k-id, update another html element with the result, turn on debug prints, use k-id references to parametrize the query
+<kdb-query k-srv="srv2" k-id="q1" k-update-elements="pre" debug="true">.Q.s
+   `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";"$t$")</kdb-query>
+
+# multiple update
+<kdb-query k-dispatch-update="true" k-update-elements="pre myObj.var">``kid1`kid2!(genRes;resForKID1;resForKID2)</kdb-query>
 ```
 
-You can provide parameters to the query by using $paramKID$ format. All such entries will be substituted with the target value. Supported targets include `select`, `textarea`, `input` with types `text`, `password`, `radio`, `checkbox` and any other element with the meaningful textContent (`span` for example). Also you can use $i$ to refer to the number of executions (can be useful with `k-interval`).
+You can provide parameters to the query by using $paramKID$ format. All such entries will be substituted with the target value. Supported targets include `kdb-editor`,`select`, `textarea`, `input` with types `text`, `password`, `radio`, `checkbox` and any other element with the meaningful textContent (`span` for example).
 
-`kdb-query` can update other elements with its result. The result should have the correct format - string for text elements, list of objects (table) for `kdb-table` and `kdb-chart`, string array for `select` or `datalist`. It can also update any element that has `kdbUpd` function.
+There are also special parameters: use $i$ to refer to the number of executions (can be useful with `k-interval`), $src$ refers to the initiator of the update or `self`, $txt$ refers to the
+data obtained from the initiator of the event (`load`, `timer` if src is self), $id$ refers to the k-id of the initiator, $pres$ - previous result.
+
+`kdb-query` can update other elements with its result. The result should have the correct format - string for text elements or `kdb-editor`, list of objects (table) for `kdb-table` and `kdb-chart`,
+ string array for `select` or `datalist`. It can also update any element that has `kdbUpd` function. There are 3 way the update may be done:
+ * consumer can subscribe to the query via `onresult` function.
+ * consumer `k-id` or var name can be added to `k-update-elements`.
+ * consumer `k-ids` or var name can be set as keys of the result dictionary when `k-dispatch-update` is true. In this case the general result will be taken from key \`.
 
 Supported attributes:
 * `k-query` - optional, a query can be set either in this attribute or between the tags like in the example above.
 * `k-srv` - optional, link to a `kdb-srv`. If it is not set the first available `kdb-srv` component will be used.
-* `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button - execute on click.
-* `k-update-elements` - optional, users can either subscribe to `kdb-query` events or you can provide their `k-id` in this attribute, in this way you can update arbitrary html elements.
+* `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button or some other html element - execute on click, k-id of `kdb-editor` - execute on its exec event, k-id of another query - execute after it (its result is available via $txt$).
+* `k-update-elements` - optional, users can either subscribe to `kdb-query` events or can provide their `k-id` or var names in this attribute, in this way you can update arbitrary html elements.
+* `k-dispatch-update` - optional, if true the result must be a list with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
 * `k-delay` - optional, in millis. With `timer` sets the delay for the first execution.
 * `k-interval` - optional, in millis. With `timer` causes query to rerun every `interval` millis. The first query will be executed with the delay of either `k-delay` or this `k-interval`.
 * `k-escape-q` - optional. If set forces `kdb-query` to escape " and \\ symbols in the query parameters (not query itself!).
+* `k-filter` - optional, name of a Javascript function or an object with `filter` function that will postprocess the result.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
 There are attributes that `kdb-query` understands on its target elements:
 * `k-append` - on text elements defines how the new result is added. Possible values: 'top', 'bottom', 'overwrite'.
+* `k-content-type` - text or html, how the result is added to an element: as html or text.
 * `k-id` - this id can be used to link other components to `kdb-query`.
 
 Api:
 * `onresult(f)` - subscribe to 'newResult' event. If the result is already ready then `f` will be called immediately. `f` should have one parameter - result.
 * `setupQuery()` - call it after you change the attributes.
-* `runQuery()` - run the query if it was not run before.
-* `rerunQuery()` - rerun the query.
+* `runQuery(args)` - run the query if it was not run before. Args is an optional object like {param1:val1, ...}.
+* `rerunQuery(args)` - rerun the query.
 
 ## kdb-table
 
 `kdb-table` can be used to show a table. `kdb-table` relies on `kdb-query` to run the actual query. `kdb-query` can be set either with its `k-id` or created implicitly via `k-query` attribute or the content of the tag.
 
+`kdb-table` can use jsGrid library to show tables. Set `k-lib` to `jsgrid`. You can also provide additional configuration to it via `k-config`
+
 Example
 ```
+# basic case
 <kdb-table>([] sym: 50?(5?`5);time:.z.T+til[50]*00:00:10; price: 50?40*50?1.0)</kdb-table>
+# update tbl from a query
+<kdb-table k-id="tbl"></kdb-table>
+
+# jsGrid
+<kdb-table k-id="tbl" k-lib="jsgrid" k-style="width:800px; height: 400px;"></kdb-table>
+# jsGrid, custom cfg, also k-search is set to true so search boxes are shown for columns
+<kdb-table k-id="tbl3" k-search="true" k-lib="jsgrid" k-config='{"sorting": false, "heading":false}' k-style="width:800px; height: 400px;"></kdb-table>
+# jsGrid - load by page large tables, see grid example for more details
+<kdb-table k-query="Q" k-lib="jsgrid" k-config='{"pageLoading":true}' k-style="width:800px; height: 400px;"></kdb-table>
 ```
 
 Supported attributes:
@@ -112,31 +149,40 @@ Supported attributes:
 * `k-query` - optional, `k-id` link to `kdb-query` or query text itself. If it is not present the content is used as in the example above.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `k-escape-html` - escape or not HTML symbols in the result.
+* `k-lib` - can be set to `jsgrid` for more fancy tables.
+* `k-search` - show search boxes in `jsgrid` tables.
+* `k-config` - change the default `jsgrid` config via this attribute. It should be either a JSON string or a variable name with the config.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
 ## kdb-chart
 
-`kdb-chart` can be used to visualize data. It can work in the following modes:
-* You can provide the full correct C3 config. Absolutely all C3 features are available. See chart examples.
+`kdb-chart` can be used to visualize data. It supports two chart libraries - C3 and Dygraph and can work in the following modes:
+* You can provide the full correct C3/Dygrpah config. Absolutely all C3/Dygraph features are available. See chart examples.
 * If the result is a table `kdb-chart` can determine params (time and data) itself. If it succeeds it will create a timeseries chart.
-* If the result is a table you can also set explicitly data and time columns and line type.
-* If the result is a dictionary `kdb-chart` will create a pie chart (type can be changed to donut or gauge).
-* If you set type to 'merge-config' it will merge the provided config with its own config, in this way you can add additional params to the C3 config.
-* Finally you can set type to 'use-config' and `kdb-chart` will use your config and insert data into it. This gives you full control like in the first item.
+* If the result is a table you can also set explicitly data and time columns and line type (for C3).
+* If the result is a dictionary `kdb-chart` will create a pie chart (type can be changed to donut or gauge). C3 only.
+* If you set type to 'merge-config' or 'dygraph-merge-config' it will merge the provided config with its own config, in this way you can add additional params to the config.
+* Finally you can set type to 'use-config' or 'dygraph-use-config' then `kdb-chart` will use your config and insert data into it. This gives you full control like in the first item.
 
 Example:
 ```
-<kdb-query k-update-elements='c2' debug="true">update ask:bid+30?0.5 from
-   ([] time1:.z.T; time:(00:00:01*til 30)+.z.T; bid:50+30?5.0)</kdb-query>
-<kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-time-col="time"
-   k-data-cols="ask bid" k-chart-type="spline" debug="true"></kdb-chart>
-
-<kdb-query k-update-elements='c1' debug="true">enlist[`data]!enlist enlist[`columns]!
-   enlist (("data1";30;200;100;400;150;250);("data2";50;20;10;40;15;25))</kdb-query>
+# basic C3 chart updated from a query
 <kdb-chart k-style='width:800px;height:400px;' k-id="c1"></kdb-chart>
+# provide data/time columns, change line style
+<kdb-chart k-style='width:800px;height:400px;' k-id="c2" k-time-col="time" k-data-cols="ask bid" k-chart-type="spline"></kdb-chart>
+# add some options (you need to redefine type)
+<kdb-chart k-style='width:800px;height:400px;' k-id="c5" k-time-col="time" k-data-cols="ask bid"
+  k-chart-type="merge-config" k-config='{"data":{"type":"spline"},"axis":{"x":{"tick":{"rotate":30}}}}'></kdb-chart>
+
+# dygraph graph
+<kdb-chart k-chart-type="dygraph" k-style='width:800px;height:400px;' k-id="c3"></kdb-chart>
+# dygraph with options and flow turned on
+<kdb-chart k-chart-type="dygraph-merge-config" k-style='width:800px;height:400px;' k-id="c7" k-flow="true"
+   k-data-cols="price" k-time-col="time" k-config='{"rollPeriod":5, "showRoller":true}'></kdb-chart>
 ```
 
-It is quite easy to set a C3 config - you just literaly translate it from json to dictionaries and set required data. In the example above you can see how it can be done. In examples you can find other examples of this conversion.
+It is quite easy to set a C3 config or Dygraph config - you just literaly translate it from json to dictionaries and set required data. You may set it on the html page itself
+and refer to it via its name.
 
 In case you want just visualize some simple table remember this - if you do not set time column explicitly put it before other time-like columns. The same is true for the data column(s). `kdb-chart` searches for the first good enough column.
 
@@ -145,13 +191,73 @@ Supported attributes:
 * `k-query` - optional, `k-id` link to `kdb-query` or query text itself. If it is not present the content of the tag is used.
 * `k-class` - optional, classes to pass to the wrapper.
 * `k-style` - optional, style to set to the wrapper.
-* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc. `use-config` can be used to use the `k-config`, `merge-config` - merge the default config with `k-config`. In the previous two cases set the chart type manually in `k-config`.
+* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc. `use-config` can be used to use the `k-config`, `merge-config` - merge the default config with `k-config`. In the previous two cases set the chart type manually in `k-config`. For dygraph set it to either 'dygraph', 'dygraph-merge-config' or 'dygraph-use-config'.
 * `k-time-col` - optional, time column.
 * `k-data-cols` - optional, data columns.
 * `k-config` - optional, either a chart config in JSON format or js name of a variable with the binary config.
-* `k-flow` - optional, if true the chart will be updated with the new data on every update. See examples and C3 flow help/example.
+* `k-flow` - optional, if true the chart will be updated with the new data on every update. See examples.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
+
+## KDBEditor
+
+KDBEditor is based on Ace editor. Q language mode and one theme are provided in `external` directory. If you want to use other language modes and/or other themes download them from the Ace github repository and put them in the same directory where `ace.js` is (they should be noconflict or noconflict-min).
+
+Ace is a very powerful editor and has many settings that can be adjusted via `k-config` attribute. The most useful are `readOnly`, `theme`, `mode`, `showGutter`.
+
+KDBEditor is tightly integrated with `kdb-query` - you can use it as a source for `kdb-query`, `kdb-query` can subscribe to line/selection exec events to execute them, it can update KDBEditor with its result. Actually `kdb-query` and `kdb-editor` can be combined to provide a basic Web Editor with the ability to execute arbitrary queries.
+
+Example:
+```
+# Basic usage - default settings, static code. !!! Always set width and height of the editor.
+<kdb-editor k-style="width:800px; height:250px;">{2*x}til 10</kdb-editor>
+
+# Advanced usage - change some settings, add k-id to allow kdb-query to update the editor, use k-append to define how it should be updated. Use k-query to explicitly subscribe to some query results.
+<kdb-editor k-query="myQ" k-append="top" k-id="e2" k-config='{"readOnly":false}' k-style="width:800px; height:250px;">{2*x} each til 10</kdb-editor>
+```
+
+Always add `k-ace-editor` css class to your html. It can be found in ace.html example.
+
+Attributes:
+* `k-query` - optional, kdb-query `k-id`. `kdb-editor` will subscribe to this query.
+* `k-config` - optional, JSON config or a variable name with the config. Use it to change the default settings.
+* `k-append` - optional, `overwrite` by default. How to update the editor with the new data - `overwrite`,`top`,`bottom`.
+* `k-style` - optional. CSS style for the editor.
+* `k-class` - optional, CSS class for the editor. `k-ace-editor` is always added.
+* `k-id` - optional, this id can be used to link other components to this one.
+* `debug` - optional, print debug info.
+
+Default settings:
+```
+theme: 'ace/theme/textmate'
+mode: 'ace/mode/q'
+readOnly: true
+scrollPastEnd: false
+fadeFoldWidgets: false
+behavioursEnabled: true   # editor will be much smarter with this option turned on, it will do correct indentation, match brackets and etc.
+useSoftTabs: true
+animatedScroll: true
+verticalScrollBar: false
+horizontalScrollBar: false
+highlightSelectedWord: true
+showGutter: true
+displayIndentGuides: false # gray lines that show where indentation is
+showInvisibles: false  # invisible symbols are shown as gray marks
+highlightActiveLine: true
+selectionStyle: 'line' # line or text - how looks the selection decoration
+wrap: 'off' # off 40 80 free (til end of the container)
+foldStyle: 'markbegin' # markbegin markbeginend manual - show marks where folding starts, starts and ends or nothing
+fontSize: 12
+keybindings: 'ace' # ace emacs vim, emacs and vim should be first downloaded
+showPrintMargin: true # gray line at 80th column
+execLine: win: 'Ctrl-Return', mac: 'Command-Return'
+execSelection: win: 'Ctrl-e', mac: 'Command-e'
+```
+
+Interface (kdb-editor object):
+* `kEditor` - the underlying editor.
+* `onexec(f)` - subscribe to exec events.
+* `kdbUpd(string)` - update the editor.
 
 ## KDBLex
 
@@ -185,3 +291,5 @@ Examples can be used to quickly overview all available functionality. Simply sta
 q srv.q
 ```
 And enter `localhost:5566/index.html` in your browser.
+
+If you start srv.q from another directory redefine '.h.HOME' to point to srv.q directory otherwise it will not be able to find examples and etc.

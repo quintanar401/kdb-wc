@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <style type="text/css" media="screen">
+
+    .k-ace-editor {
+        margin: 0;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        overflow: hidden;
+    }
+  </style>
+
+
+
+    <script src="../external/ace.js" type="text/javascript" charset="utf-8"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+
+</head>
+<body>
+  <kdb-srv fix-json="true"></kdb-srv>
+
+  <p>Query can be updated by many elements. Use Ctr-E or Ctr-Enter to trigger an update</p>
+  <kdb-editor k-id="ed1" k-config='{"readOnly":false}' k-style="width:800px; height:250px;">{2*x} til 10</kdb-editor>
+
+  <p>Click on this span to rerun the same query. <span k-id="sp1" style='color:red'><b>Click me</b></span></p>
+
+  <p>Buttons also can be used to rerun queries. This button will trigger another query that in its turn will trigger the first one <button k-id="bt1">Rerun</button></p>
+
+  <p>Results($src$,$id$,$i$,$txt$,$pres$):</p>
+  <pre k-id="pre" k-append="bottom"></pre>
+
+  <kdb-query k-execute-on="bt1" k-id="qu2" k-escape-q="true" k-update-elements="pre">"Query2. Src: $src$, id:$id$, iter:$i$, txt:$txt$"</kdb-query>  
+  <kdb-query k-execute-on="ed1 sp1 qu2" k-escape-q="true" k-update-elements="pre">"Query1. Src: $src$, id:$id$, iter:$i$, txt:$txt$, prevRes:$pres$"</kdb-query>
+
+</body>
+</html>

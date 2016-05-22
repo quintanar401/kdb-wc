@@ -177,6 +177,7 @@ class _KDBQuery extends HTMLElement
     @exec = @attributes['k-execute-on']?.textContent.split(' ').filter((e)-> e.length > 0) || ["load"]
     @debug = @attributes['debug']?.textContent || null
     @escapeQ = @attributes['k-escape-q']?.textContent || ""
+    @kDispUpd = (@attributes['k-dispatch-update']?.textContent || "false") is "true"
     @updObjs = @attributes['k-update-elements']?.textContent.split(' ').filter((e)-> e.length > 0) || []
     @kInterval = @attributes['k-interval']?.textContent || "0"
     @kInterval = if Number.parseInt then Number.parseInt @kInterval else Number @kInterval
@@ -187,59 +188,74 @@ class _KDBQuery extends HTMLElement
     @result = null
     if 'load' in @exec and (!prvExec or !('load' in prvExec))
       if document.readyState in ['complete','interactive']
-        setTimeout (=> @runQuery()), 100
+        setTimeout (=> @runQuery { src:"self", txt:"load"}), 100
       else
-        document.addEventListener "DOMContentLoaded", (ev) => @runQuery()
+        document.addEventListener "DOMContentLoaded", (ev) => @runQuery src:"self", txt:"load"
     for el in @exec when !(el in ['load','manual','timer'])
-      @addUpdater v if v = document.querySelector "[k-id='#{el}']"
+      @addUpdater(v,el) if v = document.querySelector "[k-id='#{el}']"
     @kRefs = @query.match(/\$\w+\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
     if 'timer' in @exec
-      setTimeout (=> @rerunQuery()), if @kDelay then @kDelay else @kInterval
+      setTimeout (=> @rerunQuery src:"self", txt:"timer"), if @kDelay then @kDelay else @kInterval
     console.log "kdb-query inited: srv:#{@srv}, query:#{@query}, executeOn:#{@exec}, updateObs:#{@updObjs}, refs:#{@kRefs}, delay:#{@kDelay}, interval:#{@kInterval}" if @debug
-  rerunQuery: ->
+  rerunQuery: (args = {}) ->
+    args['pres'] = @result
     @result = null
-    @runQuery()
-  runQuery: ->
+    @runQuery args
+  runQuery: (args = {}) ->
+    args["i"] = @iterationNumber
     return if @result
     if typeof @srv is 'string'
       @srv = if @srv is "" then document.getElementsByTagName("kdb-srv")?[0] else document.querySelector "[k-id='#{@srv}']"
     console.log "kdb-query: executing query" if @debug
-    @srv.runQuery @resolveRefs(@query), (r,e) =>
-      @iterationNumber += 1
+    @srv.runQuery @resolveRefs(@query, args), (r,e) =>
       console.log "kdb-query: got response with status #{e}" if @debug
       if !e
         r = (if typeof @kFilter is 'object' then @kFilter.filter r else @kFilter r) if @kFilter
         @result = r
         @sendEv()
         @updateObjects()
-      setTimeout (=> @rerunQuery()), @kInterval if @kInterval and 'timer' in @exec
+      setTimeout (=> @rerunQuery src:"self", txt:"timer"), @kInterval if @kInterval and 'timer' in @exec
+    @iterationNumber += 1
   sendEv: -> @dispatchEvent @getEv() if @result
   getEv: ->
     new CustomEvent "newResult",
-      detail: @result
+      detail: if @kDispUpd then @result[""] else @result
       bubbles: true
       cancelable: true
   onresult: (f) ->
     @addEventListener 'newResult', f
     f @getEv() if @result
-  addUpdater: (v) ->
+  addUpdater: (v,kid) ->
     if v.nodeName is 'BUTTON'
-      v.addEventListener 'click', (ev) => @rerunQuery()
+      v.addEventListener 'click', (ev) => @rerunQuery src:'button', id: kid
+    else if v.nodeName is 'KDB-EDITOR'
+      v.onexec (ev) => @rerunQuery  src:'editor', id: kid, txt: ev.detail
+    else if v.nodeName is 'KDB-QUERY'
+      v.onresult (ev) => @rerunQuery  src:'query', id: kid, txt: ev.detail
     else
-      v.addEventListener 'click', (ev) => @kLastEvent = ev; @rerunQuery()
-  updateObjects: -> @updateObj document.querySelector "[k-id='#{o}']" for o in @updObjs
-  updateObj: (o) ->
-    return unless o
+      v.addEventListener 'click', (ev) => @rerunQuery src:v.nodeName, id: kid, txt: ev.target?.textContent
+  updateObjects: ->
+    @updateObj o,true,document.querySelector "[k-id='#{o}']" for o in @updObjs
+    if @kDispUpd
+      @updateObj n,false,document.querySelector "[k-id='#{n}']" for n of @result
+  updateObj: (n,isUpd,o) ->
+    r = if @kDispUpd then @result[if isUpd then "" else n] else @result
+    if !o
+      a = n.split(".")
+      n = a.pop()
+      o = a.reduce ((x,y) -> return x?[y]), window
+      o[n] = r if o and typeof o is 'object'
+      return
     if o.kdbUpd
       try
-        o.kdbUpd @result
+        o.kdbUpd r
       catch err
         console.log "kdb-query:exception in kdbUpd"
         console.log err
     else if o.nodeName in ['SELECT','DATALIST']
       o.innerHTML = ''
-      for e,i in @result
+      for e,i in r
         opt = document.createElement 'option'
         opt.value = e.toString()
         opt.text = e.toString()
@@ -249,10 +265,10 @@ class _KDBQuery extends HTMLElement
       ty = o.attributes['k-content-type']?.textContent || 'text'
       s = if o.textContent then '\n' else ''
       if ty is 'text'
-        if a is 'top' then o.textContent = @result.toString()+s+o.textContent else if a is 'bottom' then o.textContent += s+@result.toString() else o.textContent = @result.toString()
+        if a is 'top' then o.textContent = r.toString()+s+o.textContent else if a is 'bottom' then o.textContent += s+r.toString() else o.textContent = r.toString()
       else
-        if a is 'top' then o.innerHTML = @result.toString()+s+o.innerHTML else if a is 'bottom' then o.innerHTML += s+@result.toString() else o.innerHTML = @result.toString()
-  resolveRefs: (q)->
+        if a is 'top' then o.innerHTML = r.toString()+s+o.innerHTML else if a is 'bottom' then o.innerHTML += s+r.toString() else o.innerHTML = r.toString()
+  resolveRefs: (q,args)->
     return q unless @kRefs
     if !@kMap
       @kMap = {}
@@ -260,10 +276,12 @@ class _KDBQuery extends HTMLElement
       @kMap[e] = document.querySelector "[k-id='#{e}']" for e of @kMap
     for n,v of @kMap
       if !v
-        txt = if n is "i" then @iterationNumber.toString() else if n is 'txt' then @kLastEvent.target?.textContent else n
+        val = args[n]
+        txt = if val is null or val is undefined then n else val.toString()
       else
         txt = extractInfo v
       q = q.replace (new RegExp "\\$#{n}\\$", "g"), @escape txt
+    console.log "kdb-query: after resolve - #{q}" if @debug
     q
   escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\240/g," ") else s
 
@@ -305,14 +323,19 @@ class _KDBTable extends HTMLElement
       return unless @query?.runQuery
       @query.onresult (ev) => @onResult ev
       console.log "kdb-table: init complete" if @debug
+      if @kLib is 'jsgrid' and @kConfig
+        cfg = getConfig @kConfig
+        return unless cfg?.pageLoading
+        console.log "kdb-table: pageLoading is set, forcing the first page" if @debug
+        @query.rerunQuery start: 0, size: 1, sortBy:"", sortOrder:""
   onResult: (ev) ->
     console.log "kdb-table: got event" if @debug
-    console.log ev.detail if @debug
     @updateTbl ev.detail
   kdbUpd: (r) -> @updateTbl r
   updateTbl: (r) ->
     console.log "kdb-table: data" if @debug
     console.log r if @debug
+    return @updateJSGrid r if @kLib is 'jsgrid' and @kCfg?.pageLoading
     return if (r.length || 0) is 0
     return @updateJSGrid r if @kLib is 'jsgrid'
     tbl = "<table class='kdb-table'><tr>"
@@ -325,6 +348,8 @@ class _KDBTable extends HTMLElement
     tbl += "</table>"
     @innerHTML = tbl
   updateJSGrid: (r) ->
+    if @kCfg?.pageLoading
+      return @kPromise.resolve r
     @kData = r
     f = []
     for n,v of r[0]
@@ -346,18 +371,26 @@ class _KDBTable extends HTMLElement
       paging: r.length>100
       pageButtonCount: 5
       pageSize: 50
-      data: r
       fields: f
       controller: loadData: (a) => @loadData a
     cfg = mergeCfgs cfg, getConfig @kConfig if @kConfig
-    @kFields = cfg.fields
+    if cfg.pageLoading
+      cfg.paging = true
+      cfg.autoload = true
+    else
+      cfg.data = r
+    @kCfg = cfg
     console.log "kdb-table: cfg" if @debug
     console.log cfg if @debug
     $(@kCont).jsGrid cfg
   loadData: (f) ->
+    if f.pageIndex
+      @query.rerunQuery start: (f.pageIndex-1)*f.pageSize, size: f.pageSize, sortBy: f.sortField or "", sortOrder: f.sortOrder or 'asc'
+      @kPromise = $.Deferred()
+      return @kPromise
     return @kData.filter (e) =>
       r = true
-      for v in @kFields
+      for v in @kCfg.fields
         if v.type is "text" and v.subtype is 'date'
           r = r and (!f[v.name] or -1<e[v.name].toISOString().indexOf f[v.name])
         else if v.type is "text"
@@ -636,7 +669,14 @@ class _KDBEditor extends HTMLElement
     console.log "kdb-editor: query: #{@query}" if @debug
   attachedCallback: ->
     @kEditor = ace.edit @kCont
+    @query = srv if srv = document.querySelector "[k-id='#{@query}']"
     @setCfg()
+    if @query?.runQuery
+      @query.onresult (ev) => @onResult ev
+  onResult: (ev) ->
+    console.log "kdb-editor: got event" if @debug
+    console.log ev.detail if @debug
+    @kdbUpd ev.detail
   setCfg: ->
     cfg =
       theme: 'ace/theme/textmate'
@@ -662,9 +702,12 @@ class _KDBEditor extends HTMLElement
       showPrintMargin: true
       useElasticTabstops: false
       useIncrementalSearch: false
+      execLine: win: 'Ctrl-Return', mac: 'Command-Return'
+      execSelection: win: 'Ctrl-e', mac: 'Command-e'
     cfg = mergeCfgs cfg, getConfig @kConfig if @kConfig
     console.log "kdb-editor: config" if @debug
     console.log cfg if @debug
+    @kCfg = cfg
     @kEditor.setTheme cfg.theme
     @kEditor.getSession().setMode cfg.mode
     @kEditor.setReadOnly cfg.readOnly
@@ -688,10 +731,40 @@ class _KDBEditor extends HTMLElement
     @kEditor.renderer.setShowPrintMargin cfg.showPrintMargin
     @kEditor.setOption "useElasticTabstops", cfg.useElasticTabstops if cfg.useElasticTabstops
     @kEditor.setOption "useIncrementalSearch", cfg.useIncrementalSearch if cfg.useIncrementalSearch
+    @setCommands()
   kdbUpd: (r) ->
-    return unless typeof r is 'string' or (typeof r is 'obejct' and r.length>0 and typeof r[0] is 'string')
-    @kEditor.setValue r, 0
+    return unless typeof r is 'string' or (typeof r is 'object' and r.length>0 and typeof r[0] is 'string')
+    a = @attributes['k-append']?.textContent || 'overwrite'
+    if a is 'overwrite'
+      @kEditor.setValue r, 0
+    else if a is 'top'
+      @kEditor.navigateFileStart()
+      @kEditor.insert r
+    else
+      @kEditor.navigateFileEnd()
+      @kEditor.navigateLineEnd()
+      @kEditor.insert r
     @kEditor.gotoLine 0,0,false
+  setCommands: ->
+    @kEditor?.commands.addCommands [
+      (name: "execLine", bindKey: @kCfg.execLine, readOnly: true, exec: (e) => @execLine e)
+      name: "execSelection", bindKey: @kCfg.execSelection, readOnly: true, exec: (e) => @execSelection e
+    ]
+  execLine: (e) ->
+    return unless l = @kEditor.getSession().getLine @kEditor.getCursorPosition().row
+    console.log "exec line: #{l}" if @debug
+    @sendEv l
+  execSelection: (e) ->
+    return unless s = @kEditor.getSelectedText()
+    console.log "exec select: #{s}" if @debug
+    @sendEv s
+  sendEv: (s) -> @dispatchEvent @getEv(s)
+  getEv: (s) ->
+    new CustomEvent "execText",
+      detail: s
+      bubbles: true
+      cancelable: true
+  onexec: (f) -> @addEventListener 'execText', f
 
 window.KDB ?= {}
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)

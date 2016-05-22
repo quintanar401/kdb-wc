@@ -9,21 +9,45 @@
     <script type="text/javascript" src="../external/document-register-element.js"></script>
     <script type="text/javascript" src="../kdb-wc.js"></script>
 
+    <script type="text/javascript" src="../external/vue.min.js"></script>
+
 </head>
 <body>
   <p>kdb-query can update dependent elements:</p>
-  <kdb-srv fix-json="true" debug="true"></kdb-srv>
-  <kdb-query k-update-elements="t1" debug="true">([] a:`a`b`c`d)</kdb-query>
-  <kdb-query k-update-elements="s1 c1 dlist" debug="true">`a`b`c`d</kdb-query>
-  <kdb-query k-update-elements="c1" debug="true">string .z.ph</kdb-query>
+  <kdb-srv fix-json="true"></kdb-srv>
+  <kdb-query k-update-elements="t1">([] a:`a`b`c`d)</kdb-query>
+  <kdb-query k-update-elements="s1 c1 dlist">`a`b`c`d</kdb-query>
+  <kdb-query k-update-elements="c1">string .z.ph</kdb-query>
   <p>kdb-table</p>
-  <kdb-table k-id="t1" debug="true"></kdb-table>
+  <kdb-table k-id="t1"></kdb-table>
   <p>select</p>
   <select k-id='s1'></select>
   <p>Input with datalist</p>
   <input list="dlist" type="text"></input>
   <datalist id="dlist" k-id="dlist"></datalist>
-  <p>Any text based tag like pre (with the optional append attribute)</p>
+  <p>Any text based tag like pre (with the optional k-append attribute)</p>
   <pre k-id="c1" k-append="top"></pre>
+  <p>With k-dispatch-update true you can set k-ids as dictionary keys of the result with ` corresponding to the default result.</p>
+  <kdb-query k-update-elements="def" k-dispatch-update="true">``first`second`third!("default value";"I'm the first k-id";"second";`third)</kdb-query>
+  <ul>
+    <li k-id="first"></li>
+    <li k-id="second"></li>
+    <li k-id="third"></li>
+    <li k-id="def"></li>
+  </ul>
+  <p>Use reactive frameworks like Vue to automatically create html. The following title and list are created from raw data:</p>
+  <kdb-query k-update-elements="vueData.content">`title`data!(".Q namespace:";string 10#.Q)</kdb-query>
+  <div id="vue">
+     <h3>{{content.title}}</h3>
+     <table><tbody>
+     <tr v-for="(index,item) of content.data">
+       <td>{{index}}</td><td>{{item}}</td>
+     </tr> 
+     </table></tbody>
+  </div>
+  <script>
+    vueData = { content: {} }
+    vue1 = new Vue({ el:"#vue", data: vueData})
+  </script>
 </body>
 </html>

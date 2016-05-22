@@ -339,7 +339,7 @@
     };
 
     _KDBQuery.prototype.setupQuery = function() {
-      var el, j, len, prvExec, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, v;
+      var el, j, len, prvExec, ref, ref1, ref10, ref11, ref12, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, v;
       prvExec = this.exec;
       if (this.ktimer) {
         clearTimeout(this.ktimer);
@@ -353,51 +353,61 @@
       }) : void 0) || ["load"];
       this.debug = ((ref3 = this.attributes['debug']) != null ? ref3.textContent : void 0) || null;
       this.escapeQ = ((ref4 = this.attributes['k-escape-q']) != null ? ref4.textContent : void 0) || "";
-      this.updObjs = ((ref5 = this.attributes['k-update-elements']) != null ? ref5.textContent.split(' ').filter(function(e) {
+      this.kDispUpd = (((ref5 = this.attributes['k-dispatch-update']) != null ? ref5.textContent : void 0) || "false") === "true";
+      this.updObjs = ((ref6 = this.attributes['k-update-elements']) != null ? ref6.textContent.split(' ').filter(function(e) {
         return e.length > 0;
       }) : void 0) || [];
-      this.kInterval = ((ref6 = this.attributes['k-interval']) != null ? ref6.textContent : void 0) || "0";
+      this.kInterval = ((ref7 = this.attributes['k-interval']) != null ? ref7.textContent : void 0) || "0";
       this.kInterval = Number.parseInt ? Number.parseInt(this.kInterval) : Number(this.kInterval);
-      this.kDelay = ((ref7 = this.attributes['k-delay']) != null ? ref7.textContent : void 0) || "0";
+      this.kDelay = ((ref8 = this.attributes['k-delay']) != null ? ref8.textContent : void 0) || "0";
       this.kDelay = Number.parseInt ? Number.parseInt(this.kDelay) : Number(this.kDelay);
-      if (this.kFilter = (ref8 = this.attributes['k-filter']) != null ? ref8.textContent : void 0) {
+      if (this.kFilter = (ref9 = this.attributes['k-filter']) != null ? ref9.textContent : void 0) {
         this.kFilter = this.kFilter.split(".").reduce((function(x, y) {
           return x[y];
         }), window);
       }
       this.result = null;
       if (indexOf.call(this.exec, 'load') >= 0 && (!prvExec || !(indexOf.call(prvExec, 'load') >= 0))) {
-        if ((ref9 = document.readyState) === 'complete' || ref9 === 'interactive') {
+        if ((ref10 = document.readyState) === 'complete' || ref10 === 'interactive') {
           setTimeout(((function(_this) {
             return function() {
-              return _this.runQuery();
+              return _this.runQuery({
+                src: "self",
+                txt: "load"
+              });
             };
           })(this)), 100);
         } else {
           document.addEventListener("DOMContentLoaded", (function(_this) {
             return function(ev) {
-              return _this.runQuery();
+              return _this.runQuery({
+                src: "self",
+                txt: "load"
+              });
             };
           })(this));
         }
       }
-      ref10 = this.exec;
-      for (j = 0, len = ref10.length; j < len; j++) {
-        el = ref10[j];
+      ref11 = this.exec;
+      for (j = 0, len = ref11.length; j < len; j++) {
+        el = ref11[j];
         if (!(el === 'load' || el === 'manual' || el === 'timer')) {
           if (v = document.querySelector("[k-id='" + el + "']")) {
-            this.addUpdater(v);
+            this.addUpdater(v, el);
           }
         }
       }
-      this.kRefs = (ref11 = this.query.match(/\$\w+\$/g)) != null ? ref11.map(function(e) {
+      this.kRefs = (ref12 = this.query.match(/\$\w+\$/g)) != null ? ref12.map(function(e) {
         return e.slice(1, e.length - 1);
       }) : void 0;
       this.kMap = null;
       if (indexOf.call(this.exec, 'timer') >= 0) {
         setTimeout(((function(_this) {
           return function() {
-            return _this.rerunQuery();
+            return _this.rerunQuery({
+              src: "self",
+              txt: "timer"
+            });
           };
         })(this)), this.kDelay ? this.kDelay : this.kInterval);
       }
@@ -406,13 +416,21 @@
       }
     };
 
-    _KDBQuery.prototype.rerunQuery = function() {
+    _KDBQuery.prototype.rerunQuery = function(args) {
+      if (args == null) {
+        args = {};
+      }
+      args['pres'] = this.result;
       this.result = null;
-      return this.runQuery();
+      return this.runQuery(args);
     };
 
-    _KDBQuery.prototype.runQuery = function() {
+    _KDBQuery.prototype.runQuery = function(args) {
       var ref;
+      if (args == null) {
+        args = {};
+      }
+      args["i"] = this.iterationNumber;
       if (this.result) {
         return;
       }
@@ -422,9 +440,8 @@
       if (this.debug) {
         console.log("kdb-query: executing query");
       }
-      return this.srv.runQuery(this.resolveRefs(this.query), (function(_this) {
+      this.srv.runQuery(this.resolveRefs(this.query, args), (function(_this) {
         return function(r, e) {
-          _this.iterationNumber += 1;
           if (_this.debug) {
             console.log("kdb-query: got response with status " + e);
           }
@@ -438,11 +455,15 @@
           }
           if (_this.kInterval && indexOf.call(_this.exec, 'timer') >= 0) {
             return setTimeout((function() {
-              return _this.rerunQuery();
+              return _this.rerunQuery({
+                src: "self",
+                txt: "timer"
+              });
             }), _this.kInterval);
           }
         };
       })(this));
+      return this.iterationNumber += 1;
     };
 
     _KDBQuery.prototype.sendEv = function() {
@@ -453,7 +474,7 @@
 
     _KDBQuery.prototype.getEv = function() {
       return new CustomEvent("newResult", {
-        detail: this.result,
+        detail: this.kDispUpd ? this.result[""] : this.result,
         bubbles: true,
         cancelable: true
       });
@@ -466,42 +487,83 @@
       }
     };
 
-    _KDBQuery.prototype.addUpdater = function(v) {
+    _KDBQuery.prototype.addUpdater = function(v, kid) {
       if (v.nodeName === 'BUTTON') {
         return v.addEventListener('click', (function(_this) {
           return function(ev) {
-            return _this.rerunQuery();
+            return _this.rerunQuery({
+              src: 'button',
+              id: kid
+            });
+          };
+        })(this));
+      } else if (v.nodeName === 'KDB-EDITOR') {
+        return v.onexec((function(_this) {
+          return function(ev) {
+            return _this.rerunQuery({
+              src: 'editor',
+              id: kid,
+              txt: ev.detail
+            });
+          };
+        })(this));
+      } else if (v.nodeName === 'KDB-QUERY') {
+        return v.onresult((function(_this) {
+          return function(ev) {
+            return _this.rerunQuery({
+              src: 'query',
+              id: kid,
+              txt: ev.detail
+            });
           };
         })(this));
       } else {
         return v.addEventListener('click', (function(_this) {
           return function(ev) {
-            _this.kLastEvent = ev;
-            return _this.rerunQuery();
+            var ref;
+            return _this.rerunQuery({
+              src: v.nodeName,
+              id: kid,
+              txt: (ref = ev.target) != null ? ref.textContent : void 0
+            });
           };
         })(this));
       }
     };
 
     _KDBQuery.prototype.updateObjects = function() {
-      var j, len, o, ref, results;
+      var j, len, n, o, ref, results;
       ref = this.updObjs;
-      results = [];
       for (j = 0, len = ref.length; j < len; j++) {
         o = ref[j];
-        results.push(this.updateObj(document.querySelector("[k-id='" + o + "']")));
+        this.updateObj(o, true, document.querySelector("[k-id='" + o + "']"));
       }
-      return results;
+      if (this.kDispUpd) {
+        results = [];
+        for (n in this.result) {
+          results.push(this.updateObj(n, false, document.querySelector("[k-id='" + n + "']")));
+        }
+        return results;
+      }
     };
 
-    _KDBQuery.prototype.updateObj = function(o) {
-      var a, e, err, error1, i, j, len, opt, ref, ref1, ref2, ref3, results, s, ty;
+    _KDBQuery.prototype.updateObj = function(n, isUpd, o) {
+      var a, e, err, error1, i, j, len, opt, r, ref, ref1, ref2, results, s, ty;
+      r = this.kDispUpd ? this.result[isUpd ? "" : n] : this.result;
       if (!o) {
+        a = n.split(".");
+        n = a.pop();
+        o = a.reduce((function(x, y) {
+          return x != null ? x[y] : void 0;
+        }), window);
+        if (o && typeof o === 'object') {
+          o[n] = r;
+        }
         return;
       }
       if (o.kdbUpd) {
         try {
-          return o.kdbUpd(this.result);
+          return o.kdbUpd(r);
         } catch (error1) {
           err = error1;
           console.log("kdb-query:exception in kdbUpd");
@@ -509,10 +571,9 @@
         }
       } else if ((ref = o.nodeName) === 'SELECT' || ref === 'DATALIST') {
         o.innerHTML = '';
-        ref1 = this.result;
         results = [];
-        for (i = j = 0, len = ref1.length; j < len; i = ++j) {
-          e = ref1[i];
+        for (i = j = 0, len = r.length; j < len; i = ++j) {
+          e = r[i];
           opt = document.createElement('option');
           opt.value = e.toString();
           opt.text = e.toString();
@@ -520,31 +581,31 @@
         }
         return results;
       } else {
-        a = ((ref2 = o.attributes['k-append']) != null ? ref2.textContent : void 0) || 'overwrite';
-        ty = ((ref3 = o.attributes['k-content-type']) != null ? ref3.textContent : void 0) || 'text';
+        a = ((ref1 = o.attributes['k-append']) != null ? ref1.textContent : void 0) || 'overwrite';
+        ty = ((ref2 = o.attributes['k-content-type']) != null ? ref2.textContent : void 0) || 'text';
         s = o.textContent ? '\n' : '';
         if (ty === 'text') {
           if (a === 'top') {
-            return o.textContent = this.result.toString() + s + o.textContent;
+            return o.textContent = r.toString() + s + o.textContent;
           } else if (a === 'bottom') {
-            return o.textContent += s + this.result.toString();
+            return o.textContent += s + r.toString();
           } else {
-            return o.textContent = this.result.toString();
+            return o.textContent = r.toString();
           }
         } else {
           if (a === 'top') {
-            return o.innerHTML = this.result.toString() + s + o.innerHTML;
+            return o.innerHTML = r.toString() + s + o.innerHTML;
           } else if (a === 'bottom') {
-            return o.innerHTML += s + this.result.toString();
+            return o.innerHTML += s + r.toString();
           } else {
-            return o.innerHTML = this.result.toString();
+            return o.innerHTML = r.toString();
           }
         }
       }
     };
 
-    _KDBQuery.prototype.resolveRefs = function(q) {
-      var e, j, len, n, ref, ref1, ref2, txt, v;
+    _KDBQuery.prototype.resolveRefs = function(q, args) {
+      var e, j, len, n, ref, ref1, txt, v, val;
       if (!this.kRefs) {
         return q;
       }
@@ -563,11 +624,15 @@
       for (n in ref1) {
         v = ref1[n];
         if (!v) {
-          txt = n === "i" ? this.iterationNumber.toString() : n === 'txt' ? (ref2 = this.kLastEvent.target) != null ? ref2.textContent : void 0 : n;
+          val = args[n];
+          txt = val === null || val === void 0 ? n : val.toString();
         } else {
           txt = extractInfo(v);
         }
         q = q.replace(new RegExp("\\$" + n + "\\$", "g"), this.escape(txt));
+      }
+      if (this.debug) {
+        console.log("kdb-query: after resolve - " + q);
       }
       return q;
     };
@@ -617,7 +682,7 @@
     };
 
     _KDBTable.prototype.attachedCallback = function() {
-      var q, ref, srv;
+      var cfg, q, ref, srv;
       if (!this.inited) {
         if (this.debug) {
           console.log("kdb-table: initing");
@@ -655,7 +720,22 @@
           };
         })(this));
         if (this.debug) {
-          return console.log("kdb-table: init complete");
+          console.log("kdb-table: init complete");
+        }
+        if (this.kLib === 'jsgrid' && this.kConfig) {
+          cfg = getConfig(this.kConfig);
+          if (!(cfg != null ? cfg.pageLoading : void 0)) {
+            return;
+          }
+          if (this.debug) {
+            console.log("kdb-table: pageLoading is set, forcing the first page");
+          }
+          return this.query.rerunQuery({
+            start: 0,
+            size: 1,
+            sortBy: "",
+            sortOrder: ""
+          });
         }
       }
     };
@@ -663,9 +743,6 @@
     _KDBTable.prototype.onResult = function(ev) {
       if (this.debug) {
         console.log("kdb-table: got event");
-      }
-      if (this.debug) {
-        console.log(ev.detail);
       }
       return this.updateTbl(ev.detail);
     };
@@ -675,12 +752,15 @@
     };
 
     _KDBTable.prototype.updateTbl = function(r) {
-      var c, d, e, j, len, tbl;
+      var c, d, e, j, len, ref, tbl;
       if (this.debug) {
         console.log("kdb-table: data");
       }
       if (this.debug) {
         console.log(r);
+      }
+      if (this.kLib === 'jsgrid' && ((ref = this.kCfg) != null ? ref.pageLoading : void 0)) {
+        return this.updateJSGrid(r);
       }
       if ((r.length || 0) === 0) {
         return;
@@ -707,12 +787,15 @@
     };
 
     _KDBTable.prototype.updateJSGrid = function(r) {
-      var cfg, f, n, ref, v;
+      var cfg, f, n, ref, ref1, v;
+      if ((ref = this.kCfg) != null ? ref.pageLoading : void 0) {
+        return this.kPromise.resolve(r);
+      }
       this.kData = r;
       f = [];
-      ref = r[0];
-      for (n in ref) {
-        v = ref[n];
+      ref1 = r[0];
+      for (n in ref1) {
+        v = ref1[n];
         if (typeof v === 'string') {
           f.push({
             name: n,
@@ -752,7 +835,6 @@
         paging: r.length > 100,
         pageButtonCount: 5,
         pageSize: 50,
-        data: r,
         fields: f,
         controller: {
           loadData: (function(_this) {
@@ -765,7 +847,13 @@
       if (this.kConfig) {
         cfg = mergeCfgs(cfg, getConfig(this.kConfig));
       }
-      this.kFields = cfg.fields;
+      if (cfg.pageLoading) {
+        cfg.paging = true;
+        cfg.autoload = true;
+      } else {
+        cfg.data = r;
+      }
+      this.kCfg = cfg;
       if (this.debug) {
         console.log("kdb-table: cfg");
       }
@@ -776,11 +864,21 @@
     };
 
     _KDBTable.prototype.loadData = function(f) {
+      if (f.pageIndex) {
+        this.query.rerunQuery({
+          start: (f.pageIndex - 1) * f.pageSize,
+          size: f.pageSize,
+          sortBy: f.sortField || "",
+          sortOrder: f.sortOrder || 'asc'
+        });
+        this.kPromise = $.Deferred();
+        return this.kPromise;
+      }
       return this.kData.filter((function(_this) {
         return function(e) {
           var j, len, r, ref, v;
           r = true;
-          ref = _this.kFields;
+          ref = _this.kCfg.fields;
           for (j = 0, len = ref.length; j < len; j++) {
             v = ref[j];
             if (v.type === "text" && v.subtype === 'date') {
@@ -1432,8 +1530,29 @@
     };
 
     _KDBEditor.prototype.attachedCallback = function() {
+      var ref, srv;
       this.kEditor = ace.edit(this.kCont);
-      return this.setCfg();
+      if (srv = document.querySelector("[k-id='" + this.query + "']")) {
+        this.query = srv;
+      }
+      this.setCfg();
+      if ((ref = this.query) != null ? ref.runQuery : void 0) {
+        return this.query.onresult((function(_this) {
+          return function(ev) {
+            return _this.onResult(ev);
+          };
+        })(this));
+      }
+    };
+
+    _KDBEditor.prototype.onResult = function(ev) {
+      if (this.debug) {
+        console.log("kdb-editor: got event");
+      }
+      if (this.debug) {
+        console.log(ev.detail);
+      }
+      return this.kdbUpd(ev.detail);
     };
 
     _KDBEditor.prototype.setCfg = function() {
@@ -1461,7 +1580,15 @@
         keybindings: 'ace',
         showPrintMargin: true,
         useElasticTabstops: false,
-        useIncrementalSearch: false
+        useIncrementalSearch: false,
+        execLine: {
+          win: 'Ctrl-Return',
+          mac: 'Command-Return'
+        },
+        execSelection: {
+          win: 'Ctrl-e',
+          mac: 'Command-e'
+        }
       };
       if (this.kConfig) {
         cfg = mergeCfgs(cfg, getConfig(this.kConfig));
@@ -1472,6 +1599,7 @@
       if (this.debug) {
         console.log(cfg);
       }
+      this.kCfg = cfg;
       this.kEditor.setTheme(cfg.theme);
       this.kEditor.getSession().setMode(cfg.mode);
       this.kEditor.setReadOnly(cfg.readOnly);
@@ -1499,16 +1627,91 @@
         this.kEditor.setOption("useElasticTabstops", cfg.useElasticTabstops);
       }
       if (cfg.useIncrementalSearch) {
-        return this.kEditor.setOption("useIncrementalSearch", cfg.useIncrementalSearch);
+        this.kEditor.setOption("useIncrementalSearch", cfg.useIncrementalSearch);
       }
+      return this.setCommands();
     };
 
     _KDBEditor.prototype.kdbUpd = function(r) {
-      if (!(typeof r === 'string' || (typeof r === 'obejct' && r.length > 0 && typeof r[0] === 'string'))) {
+      var a, ref;
+      if (!(typeof r === 'string' || (typeof r === 'object' && r.length > 0 && typeof r[0] === 'string'))) {
         return;
       }
-      this.kEditor.setValue(r, 0);
+      a = ((ref = this.attributes['k-append']) != null ? ref.textContent : void 0) || 'overwrite';
+      if (a === 'overwrite') {
+        this.kEditor.setValue(r, 0);
+      } else if (a === 'top') {
+        this.kEditor.navigateFileStart();
+        this.kEditor.insert(r);
+      } else {
+        this.kEditor.navigateFileEnd();
+        this.kEditor.navigateLineEnd();
+        this.kEditor.insert(r);
+      }
       return this.kEditor.gotoLine(0, 0, false);
+    };
+
+    _KDBEditor.prototype.setCommands = function() {
+      var ref;
+      return (ref = this.kEditor) != null ? ref.commands.addCommands([
+        {
+          name: "execLine",
+          bindKey: this.kCfg.execLine,
+          readOnly: true,
+          exec: (function(_this) {
+            return function(e) {
+              return _this.execLine(e);
+            };
+          })(this)
+        }, {
+          name: "execSelection",
+          bindKey: this.kCfg.execSelection,
+          readOnly: true,
+          exec: (function(_this) {
+            return function(e) {
+              return _this.execSelection(e);
+            };
+          })(this)
+        }
+      ]) : void 0;
+    };
+
+    _KDBEditor.prototype.execLine = function(e) {
+      var l;
+      if (!(l = this.kEditor.getSession().getLine(this.kEditor.getCursorPosition().row))) {
+        return;
+      }
+      if (this.debug) {
+        console.log("exec line: " + l);
+      }
+      return this.sendEv(l);
+    };
+
+    _KDBEditor.prototype.execSelection = function(e) {
+      var s;
+      if (!(s = this.kEditor.getSelectedText())) {
+        return;
+      }
+      if (this.debug) {
+        console.log("exec select: " + s);
+      }
+      return this.sendEv(s);
+    };
+
+    _KDBEditor.prototype.sendEv = function(s) {
+      return this.dispatchEvent(this.getEv(s));
+    };
+
+    _KDBEditor.prototype.getEv = function(s) {
+      return new CustomEvent("execText", {
+        detail: s,
+        bubbles: true,
+        cancelable: true
+      });
+    };
+
+    _KDBEditor.prototype.onexec = function(f) {
+      return this.addEventListener('execText', f);
     };
 
     return _KDBEditor;
