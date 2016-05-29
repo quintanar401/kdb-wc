@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <style type="text/css" media="screen">
+
+    .k-ace-editor {
+        margin: 0;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        overflow: hidden;
+    }
+    .k-const, .k-number-guid, .k-number-float, .k-number-int { color: rgb(0,0,205); }
+    .k-number-datetime, .k-number-time, .k-number-date  { color: rgb(0,0,205); }
+    .k-keyword-control { color: rgb(0,0,255); }
+    .k-const-sym { color: rgb(6,150,14); }
+    .k-command { color: rgb(197,6,11); }
+    .k-keyword-operator { color: rgb(104,118,135); }
+    .k-keyword-function { color: rgb(60,76,114); }
+    .k-variable, .k-keyword-language { color: rgb(49, 132, 149); }
+    .k-name { color: black; }
+    .k-comment, .k-simple-comment, .k-eof-comment { color: rgb(76,136,107); }
+    .k-string { color: rgb(3,106,7); }
+
+    .k-lexer {
+      text-autospace:none;
+      font-family: Consolas;
+      white-space: nowrap;
+      font-size:0.8em;
+      line-height:1em;
+    }
+    .k-value {
+      min-width:100px;
+      max-height:5em;
+      overflow-y:auto;
+      margin-left:0.3em;
+      margine-right:0.5em;
+      display:inline-block;
+    }
+    .k-value2 {
+      max-width:98%;
+      max-height:5em;
+      overflow:auto;
+    }
+    .k-console {
+      overflow:auto;
+      width:58%;
+      float:right;
+      margin:10px;
+      max-height:800px;
+    }
+    .k-lexer > div { margin-left:0.5em;}
+    .k-expr {
+       background-color: rgb(220,220,220);
+       position: absolute;
+    }
+  </style>
+
+
+
+    <script src="../external/ace.js" type="text/javascript" charset="utf-8"></script>
+
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../kdb-lex.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+    <script type="text/javascript" src="../external/vue.min.js"></script>
+    <script type="text/javascript" src="dbg.js"></script>
+</head>
+<body>
+<kdb-srv fix-json="true" debug="true"></kdb-srv>
+<div id="vueExec">
+  <form>
+         <input type="button" value="Init" k-id=".d2.i">
+	       <input type=button value="Run" k-id=".d2.r">
+         <div style="width:30px; height:1em; display:inline-block;"></div>
+         <input type="button" value="Step Into" k-id=".d2.l">
+         <input type="button" value="Step Over" k-id=".d2.nxt">
+         <input type="button" value="Next Expr" k-id=".d2.nexp">
+         <input type="button" value="Step Out" k-id=".d2.ef">
+         <input type="button" value="One Instr" k-id=".d2.s">
+         <input type="button" value="Continue" k-id=".d2.cont">
+
+         <div style="float:right; display:inline-block;"><input type=button value="Refresh" k-id="refresh">
+           <input type=button value="Help" onclick="uiData.user.help = true">
+           <input type=button value="About" onclick="uiData.user.about = true">
+         </div>
+         <div style="margin-top:5px">
+           <input type="checkbox" k-id="nexec"/>
+           <lable>native execution &nbsp;&nbsp;</lable>
+           <input type="text" value="10000" size="4" k-id="nexcp" style="text-align: right;"/>
+           <lable>exceptions to handle</lable>
+           <input type="checkbox" checked="1" k-id="nodbg"/>
+           <lable>ignore internal fns</label>
+           <input type="text" value="5" size="4" k-id="ntm" style="text-align: right;"/>
+           <lable>timeout</lable>
+         </div>
+  </form>
+  <div style="width:40%; float:left;">
+    <p style="margin-top:3px;">Enter expressions and press Ctr-E/Ctr-Enter to exec:</p>
+    <kdb-editor k-id="pad" k-config='{"readOnly":false}' k-style="width:600px; height:12em;"></kdb-editor>
+    <p>
+      Current status:<span k-id="status" k-content-type="html" style="margin-left:0.5em">unknown</span>,
+      current function:<span k-id="currFn" style="margin-left:0.5em">unknown</span>
+    </p>
+    <kdb-editor k-id="fnView" k-style="width:100%; height:300px;" k-config='{"highlightActiveLine":false}'></kdb-editor>
+    <p>Stack (click on funcs):</p>
+    <div class="k-lexer" k-id="stackView">
+      <div class="k-value2" v-for="item in stack[1]" @click="$event.kdetail = -1">{{{lexer.filter(item)}}}</div>
+      <div class="k-value2" v-for="item in stack[2]" @click="$event.kdetail = $index">{{{lexer.filter(item)}}}</div>
+    </div>
+  </div>
+  <div style="width:58%; float:right; margin:10px; overflow-x:auto;">
+    <p>Arguments and local variables:</p>
+    <table style="border-spacing: 0px; border-collapse:collapse;">
+        <tr class="k-lexer" v-for="(index,item) of args"><td>{{index}}</td><td style="border-left: 1px solid black;"><div class="k-value">{{{lexer.filter(item)}}}</div></td></tr>
+    </table>
+  </div>
+  <div class="k-console">
+    <p>Console:</p>
+    <div class="k-lexer" k-id='console' k-append='top' k-content-type='html'></div>
+  </div>
+</div>
+
+<div id="vueUI" @click="user={ help:false, about: false}">
+   <div v-show="user.help || user.about || wait || inject || fail" style="z-index: 1000; border: medium none; margin: 0px; padding: 0px; width: 100%; height: 100%; top: 0px; left: 0px; background-color: rgb(0, 0, 0); opacity: 0.6; cursor: wait; position: fixed;"></div>
+   <div v-show="user.help" style="z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 80%; top: 10%; left: 10%; text-align: left; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255); cursor: default; height: 80%; overflow: auto;">
+     Some message
+   </div>
+   <div v-show="user.about" style="z-index: 1011; position: fixed; padding: 0px; margin: 0px; width: 20%; top: 40%; left: 40%; text-align: center; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
+     Debug.html<br>
+     See <a href="https://github.com/quintanar401/kdb-wc">Github</a> for more info on web components.<br>
+     By Andrey Kozyrev.
+   </div>
+   <div v-show="wait" style="z-index: 1011; position: fixed; padding: 0px; margin: 0px; width: 20%; top: 40%; left: 40%; text-align: center; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
+     Please wait, this may take some time.
+   </div>
+   <div v-show="inject" style="z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 30%; top: 40%; left: 35%; text-align: center; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
+     Couldn't detect the debugger on this instance. <br> Press inject to inject it in order to proceed. <br><br>
+     <button k-id="inject">Inject</button>
+   </div>
+   <div v-show="fail" style="font-size:18px; z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 30%; top: 40%; left: 35%; text-align: center; color:red; border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
+      Failure: {{ failMsg }}
+   </div>
+</div>
+<script>
+    var uiData = { user: { help: false, about: false}, wait: 0, inject: false, fail:false, failMsg:"Unknown error"};
+    var vueUI = new Vue({ el:"#vueUI", data: uiData});
+
+    var execData = { lexer: KDB.KDBLexer, stack: [0,[],[]], args:{} };
+    var vueUI = new Vue({ el:"#vueExec", data: execData});
+</script>
+
+<kdb-query k-dispatch-update="true">$[`d2 in key `;enlist[`getStatus]!enlist 1b;enlist[`uiData.inject]!enlist 1b]</kdb-query>
+<kdb-query k-execute-on="inject" k-dispatch-update="true" k-escape-q="true">@[{value x;``uiData.inject!(0;0b)};"$dbgCode$";{`uiData.inject`uiData.fail`uiData.failMsg!(0b;1b;x)}]</kdb-query>
+<kdb-query k-execute-on="fnView console pad" k-update-elements="console" k-escape-q="true" k-filter="KDB.KDBLexer" k-status-var="uiData.wait">@[{.Q.s value x};"$txt$";{"Exception: ",x,"\n"}]," "</kdb-query>
+
+<kdb-query k-id="getStatus" k-dispatch-update="true" k-execute-on="stackView .d2.i .d2.r .d2.nxt .d2.nexp .d2.l .d2.s .d2.cont refresh" k-escape-q="true" k-status-var="uiData.wait">
+   {[x;y;z;e] 0N!(x;y;z;e);X::.z.s;
+     status:{
+       ctx:{ctx:.d2`fr`sTop; if[x;.d2.fr:{x 3}/[x;.d2.fr]; .d2.sTop:.d2.fr 4]; r:y x; .d2.fr:ctx 0; .d2.sTop:ctx 1; r};
+       psn:{n:.d2.sTop-7; ($[x;enlist[" return back"];()],n#r;n _r:reverse .d2.ps[100])};
+       st:{("";"&lt;span style='color:red;'&gt;exception ",.d2.fr[4],"&lt;/span&gt;";"breakpoint";"";"";"running").d2.fr 2};
+       cfn:{`anonymous^.d2.fmap first .d2.fr[6;0]};
+       arg:{.Q.s each .d2.v[x]};
+       f:{`text`row`column`markers!(f;1+c 0;c 1;enlist `xy`type`class!(c:raze {(sum"\n"=y#x;(reverse y#x)?"\n")}[f:string f]each(min;1+max@)@\:.d2.txt0[f:.d2.fr[6;0]].d2.fr 1;`text;"k-expr"))};
+       `fnView`execData.stack`status`currFn`execData.args!($[count x;x _;::]ctx[y;f];y,ctx[y;psn];st[];ctx[y;cfn];arg[y])};
+     st0:{`fnView`execData.stack`status`currFn`execData.args!("Not running";(0;();());"not running";"unknown";()!())};
+     fid:{$[0=.d2.fr 2;x;.d2.fr 7]};
+     if[x~`stackView; z:z+1+n:"I"$y; if[n<0;z:0]];
+     if[x~`refresh; z:0];
+     if[x like ".d2.*";
+       v:$[ir:x in `.d2.i`.d2.r;({(value x)[]};enlist"{[] ",e[2],"}");(),::]; id:fid 0; .d2.na: e 0; .d2.e: e 1; .d2.nodbg: e 3; .d2.tm: e 4;
+       r:.[value x;v;::];
+       if[0=.d2.fr 2; s:st0[]; s[`console]: enlist .Q.s r; :s];
+       s:status[$[not[ir]&id~fid 1;`text;()];z];
+       if[(0&lt;.d2.fr 2)&10=type r; s[`uiData.fail`uiData.failMsg]:(1b;"Internal exception: ",r)];
+       :s;
+     ];
+     if[0=.d2.fr 2;:st0[]];
+     : status[();z];
+   }[`$"$id$";"$txt$";$execData.stack[0]$;($nexec$;0^"I"$"$nexcp$";"$pad$";$nodbg$;`timespan$`minute$"I"$"$ntm$")]
+   </kdb-query>
+</body>
+</html>

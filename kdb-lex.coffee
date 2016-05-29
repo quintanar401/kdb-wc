@@ -11,7 +11,7 @@ class KDBLex
         res += "</div>" unless o.y is 0
         res += "<div class='"+(cmap.line||"k-line")+"'>"
       res += "<span class='#{cmap[o.type]||o.type}'>#{@escHtml o.token}</span>"
-    res
+    if res then res+"</div>" else res
   process: (txt) ->
     @toks = []
     t = txt.split '\n' if typeof txt is 'string'
@@ -103,6 +103,7 @@ class KDBLex
       @toks.push type:"k-comment", token: cmt[2], x: st.x, y: st.y
       return st
     if st.line[0] is '"'
+      st = @pushTxt st
       st.state = 'str'
       st.line = st.line.slice 1
       st.x += 1

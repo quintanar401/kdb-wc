@@ -58,6 +58,13 @@ getConfig = (c) ->
   catch err
     console.log "kdb-wc: config parse exception"
     return console.log err
+keval = (s) ->
+  # .split(".").reduce ((x,y) -> return x[y]), window
+  try
+    eval s
+  catch err
+    null
+
 
 class _KDBSrv extends HTMLElement
   createdCallback: ->
@@ -172,6 +179,7 @@ class _KDBQuery extends HTMLElement
     clearTimeout @ktimer if @ktimer
     @ktimer = null
     @iterationNumber = 0
+    @kID = @attributes['k-id']?.textContent || "undefined"
     @query = @attributes['k-query']?.textContent || @textContent
     @srv = @attributes['k-srv']?.textContent || ""
     @exec = @attributes['k-execute-on']?.textContent.split(' ').filter((e)-> e.length > 0) || ["load"]
@@ -183,8 +191,10 @@ class _KDBQuery extends HTMLElement
     @kInterval = if Number.parseInt then Number.parseInt @kInterval else Number @kInterval
     @kDelay = @attributes['k-delay']?.textContent || "0"
     @kDelay = if Number.parseInt then Number.parseInt @kDelay else Number @kDelay
+    @kQStatus = @attributes['k-status-var']?.textContent || null
+    @kQNum = 0
     if @kFilter = @attributes['k-filter']?.textContent
-      @kFilter = @kFilter.split(".").reduce ((x,y) -> return x[y]), window
+      @kFilter = keval @kFilter
     @result = null
     if 'load' in @exec and (!prvExec or !('load' in prvExec))
       if document.readyState in ['complete','interactive']
@@ -193,7 +203,7 @@ class _KDBQuery extends HTMLElement
         document.addEventListener "DOMContentLoaded", (ev) => @runQuery src:"self", txt:"load"
     for el in @exec when !(el in ['load','manual','timer'])
       @addUpdater(v,el) if v = document.querySelector "[k-id='#{el}']"
-    @kRefs = @query.match(/\$\w+\$/g)?.map (e) -> e.slice 1,e.length-1
+    @kRefs = @query.match(/\$(\w|\.)(\w|\.|\]|\[)*\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
     if 'timer' in @exec
       setTimeout (=> @rerunQuery src:"self", txt:"timer"), if @kDelay then @kDelay else @kInterval
@@ -204,20 +214,23 @@ class _KDBQuery extends HTMLElement
     @runQuery args
   runQuery: (args = {}) ->
     args["i"] = @iterationNumber
-    return if @result
+    return if @result isnt null
     if typeof @srv is 'string'
       @srv = if @srv is "" then document.getElementsByTagName("kdb-srv")?[0] else document.querySelector "[k-id='#{@srv}']"
     console.log "kdb-query: executing query" if @debug
+    @kQNum += 1
+    @updateStatus()
     @srv.runQuery @resolveRefs(@query, args), (r,e) =>
+      @kQNum -= 1
       console.log "kdb-query: got response with status #{e}" if @debug
       if !e
         r = (if typeof @kFilter is 'object' then @kFilter.filter r else @kFilter r) if @kFilter
         @result = r
-        @sendEv()
         @updateObjects()
+        @sendEv()
       setTimeout (=> @rerunQuery src:"self", txt:"timer"), @kInterval if @kInterval and 'timer' in @exec
     @iterationNumber += 1
-  sendEv: -> @dispatchEvent @getEv() if @result
+  sendEv: -> @dispatchEvent @getEv() if @result isnt null
   getEv: ->
     new CustomEvent "newResult",
       detail: if @kDispUpd then @result[""] else @result
@@ -225,7 +238,7 @@ class _KDBQuery extends HTMLElement
       cancelable: true
   onresult: (f) ->
     @addEventListener 'newResult', f
-    f @getEv() if @result
+    f @getEv() if @result isnt null
   addUpdater: (v,kid) ->
     if v.nodeName is 'BUTTON'
       v.addEventListener 'click', (ev) => @rerunQuery src:'button', id: kid
@@ -234,22 +247,33 @@ class _KDBQuery extends HTMLElement
     else if v.nodeName is 'KDB-QUERY'
       v.onresult (ev) => @rerunQuery  src:'query', id: kid, txt: ev.detail
     else
-      v.addEventListener 'click', (ev) => @rerunQuery src:v.nodeName, id: kid, txt: ev.target?.textContent
+      v.addEventListener 'click', (ev) => @rerunQuery src:v.nodeName, id: kid, txt: if (typeof ev.kdetail isnt "undefined" and ev.kdetail isnt null) then ev.kdetail else  ev.target?.textContent
+  kdbUpd: (r,kid) -> @rerunQuery  src:'query', id: kid, txt: r
+  updateStatus: ->
+    if @kQStatus
+      a = new Function "x",@kQStatus+" = x; console.log(x);"
+      try
+        a(@kQNum)
+      catch
+        null
+    return
   updateObjects: ->
+    @updateStatus()
     @updateObj o,true,document.querySelector "[k-id='#{o}']" for o in @updObjs
     if @kDispUpd
-      @updateObj n,false,document.querySelector "[k-id='#{n}']" for n of @result
+      @updateObj n,false,document.querySelector "[k-id='#{n}']" for n of @result when n
   updateObj: (n,isUpd,o) ->
     r = if @kDispUpd then @result[if isUpd then "" else n] else @result
     if !o
-      a = n.split(".")
-      n = a.pop()
-      o = a.reduce ((x,y) -> return x?[y]), window
-      o[n] = r if o and typeof o is 'object'
+      a = new Function "x",n+" = x"
+      try
+        a(r)
+      catch
+        null
       return
     if o.kdbUpd
       try
-        o.kdbUpd r
+        o.kdbUpd r, @kID
       catch err
         console.log "kdb-query:exception in kdbUpd"
         console.log err
@@ -277,13 +301,14 @@ class _KDBQuery extends HTMLElement
     for n,v of @kMap
       if !v
         val = args[n]
+        val = keval n if val is null or val is undefined
         txt = if val is null or val is undefined then n else val.toString()
       else
         txt = extractInfo v
-      q = q.replace (new RegExp "\\$#{n}\\$", "g"), @escape txt
+      q = q.replace (new RegExp "\\$#{n.replace /(\[|\])/g,"."}\\$", "g"), @escape txt
     console.log "kdb-query: after resolve - #{q}" if @debug
     q
-  escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\240/g," ") else s
+  escape: (s) -> if @escapeQ then s.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\240/g," ").replace(/\n/g,"\\n") else s
 
 class _KDBTable extends HTMLElement
   createdCallback: ->
@@ -664,6 +689,7 @@ class _KDBEditor extends HTMLElement
     @kCont.className = kClass
     @kCont.style.cssText = kStyle
     @kCont.textContent = this.textContent
+    @kMarkers = null
     this.innerHTML = ''
     this.appendChild @kCont
     console.log "kdb-editor: query: #{@query}" if @debug
@@ -733,18 +759,40 @@ class _KDBEditor extends HTMLElement
     @kEditor.setOption "useIncrementalSearch", cfg.useIncrementalSearch if cfg.useIncrementalSearch
     @setCommands()
   kdbUpd: (r) ->
-    return unless typeof r is 'string' or (typeof r is 'object' and r.length>0 and typeof r[0] is 'string')
-    a = @attributes['k-append']?.textContent || 'overwrite'
-    if a is 'overwrite'
-      @kEditor.setValue r, 0
-    else if a is 'top'
-      @kEditor.navigateFileStart()
-      @kEditor.insert r
-    else
-      @kEditor.navigateFileEnd()
-      @kEditor.navigateLineEnd()
-      @kEditor.insert r
-    @kEditor.gotoLine 0,0,false
+    if @debug
+      console.log "kdb-editor update"
+      console.log r
+    cfg = null
+    if typeof r is 'object' and !Array.isArray r
+      cfg = r
+      r = cfg.text
+    if typeof r is 'string' or Array.isArray r
+      a = @attributes['k-append']?.textContent || 'overwrite'
+      if a is 'overwrite'
+        @kEditor.setValue r, 0
+        if @kMarkers
+          @kEditor.getSession().removeMarker m for m in @kMarkers
+          @kMarkers = null
+        @kEditor.getSession().clearAnnotations()
+        @kEditor.getSession().clearBreakpoints()
+      else if a is 'top'
+        @kEditor.navigateFileStart()
+        @kEditor.insert r
+      else
+        @kEditor.navigateFileEnd()
+        @kEditor.navigateLineEnd()
+        @kEditor.insert r
+      @kEditor.gotoLine 0,0,false
+    if cfg
+      @kEditor.gotoLine (cfg.row or 0),(cfg.column or 0),false if cfg.row? or cfg.column?
+      if cfg.markers?
+        (@kEditor.getSession().removeMarker m for m in @kMarkers) if @kMarkers
+        Range = ace.require('./range').Range
+        @kMarkers = (@kEditor.getSession().addMarker new Range(m.xy[0],m.xy[1],m.xy[2],m.xy[3]), m.class, m.type || "text", false for m in cfg.markers)
+      if cfg.annotations?
+        @kEditor.getSession().setAnnotations cfg.annotations
+      if cfg.breakpoints?
+        @kEditor.getSession().setBreakpoints cfg.breakpoints
   setCommands: ->
     @kEditor?.commands.addCommands [
       (name: "execLine", bindKey: @kCfg.execLine, readOnly: true, exec: (e) => @execLine e)

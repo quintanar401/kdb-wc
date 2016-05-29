@@ -1,3 +1,7 @@
+## 0.9.0
+* update ace dynamically with options
+* some bugfixes and extensions
+
 ## 0.8.0
 * add dispatch update
 * arguments for queries

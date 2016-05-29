@@ -32,7 +32,11 @@
         }
         res += "<span class='" + (cmap[o.type] || o.type) + "'>" + (this.escHtml(o.token)) + "</span>";
       }
-      return res;
+      if (res) {
+        return res + "</div>";
+      } else {
+        return res;
+      }
     };
 
     KDBLex.prototype.process = function(txt) {
@@ -238,6 +242,7 @@
         return st;
       }
       if (st.line[0] === '"') {
+        st = this.pushTxt(st);
         st.state = 'str';
         st.line = st.line.slice(1);
         st.x += 1;

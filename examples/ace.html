@@ -18,6 +18,11 @@
         right: 0;
         overflow: hidden;
     }
+    .k-marker {
+      background-color: rgb(200,200,200);
+      position: absolute;
+    }
+    .ace_breakpoint { background-color: rgb(230,100,100); }
   </style>
 
 
@@ -50,9 +55,12 @@ procReq:{[q;t]
  };
 </kdb-editor>
 
-  <p>Update an editor from a query.</p>
-  <kdb-query k-update-elements="e">{x:(where 100=type each x)#x; "\n"sv string[key x],'":",/:string value x} .Q</kdb-query>
-  <kdb-editor k-id="e" k-style="width:800px; height:250px;"></kdb-editor>
+  <p>Update an editor from a query (with optional params: markers, annotations, breakpoints, position).</p>
+  <kdb-query k-update-elements="e">`text`row`column`markers`annotations`breakpoints!({x:(where 100=type each x)#x; "\n"sv string[key x],'":",/:string value x} .Q;10;15;
+      (`xy`type`class!(13 0 13 10000;`fullLine;"k-marker");`xy`type`class!(7 5 9 15;`line;"k-marker"));
+      (`text`row`type!("Info anno";4;`info);`text`row`type!("Warn anno";8;`warning);`html`row`type!("anno &lt;b&gt;with html&lt;/b&gt;";14;`error));
+      (5 12))</kdb-query>
+  <kdb-editor debug="true" k-id="e" k-style="width:800px; height:250px;"></kdb-editor>
 
   <p>Change the default settings via k-config (readonly mode for example). kdb-query can use kdb-editor as a source. Enter any expression, press the button and the result will be shown in the editor above</p>
   <kdb-query k-execute-on="btn" k-update-elements="e" k-escape-q="yes">.Q.s $e2$</kdb-query>

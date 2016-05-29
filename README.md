@@ -105,6 +105,7 @@ Supported attributes:
 * `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button or some other html element - execute on click, k-id of `kdb-editor` - execute on its exec event, k-id of another query - execute after it (its result is available via $txt$).
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or can provide their `k-id` or var names in this attribute, in this way you can update arbitrary html elements.
 * `k-dispatch-update` - optional, if true the result must be a list with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
+* `k-status-var` - optional, report the current number of running queries into this JS variable.
 * `k-delay` - optional, in millis. With `timer` sets the delay for the first execution.
 * `k-interval` - optional, in millis. With `timer` causes query to rerun every `interval` millis. The first query will be executed with the delay of either `k-delay` or this `k-interval`.
 * `k-escape-q` - optional. If set forces `kdb-query` to escape " and \\ symbols in the query parameters (not query itself!).
@@ -207,6 +208,14 @@ Ace is a very powerful editor and has many settings that can be adjusted via `k-
 
 KDBEditor is tightly integrated with `kdb-query` - you can use it as a source for `kdb-query`, `kdb-query` can subscribe to line/selection exec events to execute them, it can update KDBEditor with its result. Actually `kdb-query` and `kdb-editor` can be combined to provide a basic Web Editor with the ability to execute arbitrary queries.
 
+You can update a kdb-editor with a string or with an options object. Supported options:
+* `text` - optional new/additional text.
+* `row` - optional new row for the cursor (starts from 1).
+* `column` - optional new column for the cursor.
+* `markers` - optional markers like {xy:[startRow startCol endRow endCol], class:"css_class", type:"text or fullLine or screenLine"}, class must have 'position:absolute'.
+* `annotations` - optional gutter annotations like {row:Num, text:"txt", html:"html", type:"error or warning or info"}
+* `breakpoints` - optional gutter breakpoints. Array of numbers. Change "ace_breakpoint" class to customize.
+
 Example:
 ```
 # Basic usage - default settings, static code. !!! Always set width and height of the editor.
@@ -257,7 +266,7 @@ execSelection: win: 'Ctrl-e', mac: 'Command-e'
 Interface (kdb-editor object):
 * `kEditor` - the underlying editor.
 * `onexec(f)` - subscribe to exec events.
-* `kdbUpd(string)` - update the editor.
+* `kdbUpd(string || options)` - update the editor.
 
 ## KDBLex
 
