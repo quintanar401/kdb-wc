@@ -5,7 +5,7 @@ system "t 5000"
 .h.oldPh:.z.ph;
 
 .z.ph:{-1 "QUERY: ",x:$[type x;x;first x];
-  $[x like"*&target=*";procReq ."&" vs last "?" vs x;.h.oldPh x]}
+  $[x like"*&target=*";@[{procReq ."&" vs last "?" vs x};x;{.h.he x}];.h.oldPh x]}
 
 procReq:{[q;t]
   t:`$$[(t:7_ t) like "*:*";":",t;t];
@@ -28,11 +28,11 @@ cMap:(`int$())!`$();
 trgMap:(`$())!`$();
 
 // as an example logical srv = local srv
-trgMap[`server]:`localServer;
-cMap[0i]:`localServer;
+trgMap[`HTTPServer]:`httpServer;
+cMap[0i]:`httpServer;
 
 getTrg:{$[null h:cMap?x;openTrg x;h]};
-openTrg:{cMap[hopen x]::x;cMap?x};
+openTrg:{cMap[@[{hopen (x;10000)};x;{'"hopen for ",string[x]," failed with ",y}[x]]]::x;cMap?x};
 
 subs:{[f] cSubs[.z.w]:(wsType;$[10=type f;value f;f]); execSub[0b;.z.w;cSubs .z.w]};
 

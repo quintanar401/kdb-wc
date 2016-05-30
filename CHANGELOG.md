@@ -1,3 +1,8 @@
+## 0.9.1
+* add on-error to query
+* fix bugs and srv.q
+* fix debug.html
+
 ## 0.9.0
 * update ace dynamically with options
 * some bugfixes and extensions

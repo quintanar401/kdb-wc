@@ -1,3 +1,4 @@
+'use strict'
 class KDBLex
   constructor: ->
   getTokens: (txt) -> @process txt

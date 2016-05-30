@@ -60,7 +60,7 @@ Supported attributes:
 * `k-srv-uri` - optional, target websocket server. Format: "host:port". By default it is the current web server.
 * `k-srv-user` - optional, a user for http requests.
 * `k-srv-pass` - optional, a password for http requests.
-* `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server.
+* `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server. When the name is '' this option is ignored.
 * `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json? ` or `jsn? ` if it is not provided and the result type is `json`.
 * `k-id` - optional, this id can be used to link other components to this one.
 * `fix-json` - optional, if it is set kdb-srv will send an additional query to fix a json serialization issue in the default .z.ph in kdb+ 3.2(it will set .h.tx[\`jsn] to .j.j').
@@ -106,6 +106,7 @@ Supported attributes:
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or can provide their `k-id` or var names in this attribute, in this way you can update arbitrary html elements.
 * `k-dispatch-update` - optional, if true the result must be a list with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
 * `k-status-var` - optional, report the current number of running queries into this JS variable.
+* `k-on-error` - optional, like `k-update-elements` but if any srv error occurs it will be sent to these object(s).
 * `k-delay` - optional, in millis. With `timer` sets the delay for the first execution.
 * `k-interval` - optional, in millis. With `timer` causes query to rerun every `interval` millis. The first query will be executed with the delay of either `k-delay` or this `k-interval`.
 * `k-escape-q` - optional. If set forces `kdb-query` to escape " and \\ symbols in the query parameters (not query itself!).

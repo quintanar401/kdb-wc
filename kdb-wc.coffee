@@ -1,3 +1,4 @@
+'use strict'
 # <kdb-connect srvUser="u" srvPass="p" target="h" query="starting sequence"/>
 (() ->
   try
@@ -23,7 +24,7 @@ extractInfo = (v) ->
     else if v.type is 'radio'
       txt = v.form.querySelector("input[type='radio'][name='#{v.name}']:checked")?.value || ''
     else
-      txt = v?.value || 'unsupported'
+      txt = v?.value || ''
   else if v.nodeName is 'TEXTAREA'
     txt = v.value
   else if v.nodeName is 'KDB-EDITOR'
@@ -127,7 +128,7 @@ class _KDBSrv extends HTMLElement
     @wsReq = @wsQueue.shift()
     req = @wsReq.q
     req = @qPrefix + req if typeof req is 'string' and @qPrefix
-    req = "%target=#{extractInfo @target}%" + req if @target
+    req = "%target=#{trg}%" + req if @target and trg=extractInfo @target
     if @rType is 'q'
       try
         req = ' '+req if typeof req is 'string' and req[0] is '`' # compensate the strange behavior of serialize
@@ -139,15 +140,15 @@ class _KDBSrv extends HTMLElement
     @sendWS @wsReq.q,@wsReq.cb
     @wsReq = null
   sendHTTP: (q,cb) ->
-    if @fixJson and !@target
+    if @fixJson
       @fixJson = null
       @qPrefix = "jsn?enlist " unless @qPrefix
       return @runQuery "{.h.tx[`jsn]:(.j.j');1}[]", (r,e) => @runQuery q, cb
     @qPrefix = "json?enlist " if !@qPrefix and @srvType is "http" and @rType is "json"
     xhr = new XMLHttpRequest()
     xhr.onerror = =>
-      console.log "kdb-srv error: "+xhr.statusText if @debug
-      cb null, xhr.statusText
+      console.log "kdb-srv error: "+xhr.statusText + " - " + xhr.responseText if @debug
+      cb null, xhr.statusText+": "+xhr.responseText
     xhr.ontimeout = =>
       console.log "kdb-srv timeout" if @debug
       cb null, "timeout"
@@ -155,17 +156,17 @@ class _KDBSrv extends HTMLElement
       return xhr.onerror() unless xhr.status is 200
       console.log "kdb-srv data: "+xhr.responseText.slice(0,50) if @debug
       try
-        res = if @rType is "json" then JSON.parse xhr.responseText else if @rType is "xml" then xhr.responseXML else xhr.responseText
-      catch error
-        console.error "kdb-srv: exception in JSON.parse"
-        return cb null, "JSON.parse error: "+error.toString()
-      try
+        try
+          res = if @rType is "json" then JSON.parse xhr.responseText else if @rType is "xml" then xhr.responseXML else xhr.responseText
+        catch error
+          console.error "kdb-srv: exception in JSON.parse"
+          return cb null, "JSON.parse error: "+error.toString()
         cb res, null
       catch err
         console.error "kdb-srv: HTTP callback exception"
         console.log err
     q = @qPrefix + encodeURIComponent q
-    q = q + "&target=" + extractInfo @target if @target
+    q = q + "&target=" + trg if @target and trg=extractInfo @target
     console.log "kdb-srv sending request:"+q if @debug
     xhr.open 'GET', q, true, @srvUser, @srvPass
     xhr.send()
@@ -187,6 +188,7 @@ class _KDBQuery extends HTMLElement
     @escapeQ = @attributes['k-escape-q']?.textContent || ""
     @kDispUpd = (@attributes['k-dispatch-update']?.textContent || "false") is "true"
     @updObjs = @attributes['k-update-elements']?.textContent.split(' ').filter((e)-> e.length > 0) || []
+    @updErr = @attributes['k-on-error']?.textContent.split(' ').filter((e)-> e.length > 0) || []
     @kInterval = @attributes['k-interval']?.textContent || "0"
     @kInterval = if Number.parseInt then Number.parseInt @kInterval else Number @kInterval
     @kDelay = @attributes['k-delay']?.textContent || "0"
@@ -223,9 +225,13 @@ class _KDBQuery extends HTMLElement
     @srv.runQuery @resolveRefs(@query, args), (r,e) =>
       @kQNum -= 1
       console.log "kdb-query: got response with status #{e}" if @debug
-      if !e
+      if e
+        @updateStatus()
+        @updObjWithRes o,document.querySelector("[k-id='#{o}']"),e for o in @updErr
+      else
         r = (if typeof @kFilter is 'object' then @kFilter.filter r else @kFilter r) if @kFilter
         @result = r
+        @updateStatus()
         @updateObjects()
         @sendEv()
       setTimeout (=> @rerunQuery src:"self", txt:"timer"), @kInterval if @kInterval and 'timer' in @exec
@@ -251,19 +257,20 @@ class _KDBQuery extends HTMLElement
   kdbUpd: (r,kid) -> @rerunQuery  src:'query', id: kid, txt: r
   updateStatus: ->
     if @kQStatus
-      a = new Function "x",@kQStatus+" = x; console.log(x);"
+      a = new Function "x",@kQStatus+" = x"
       try
         a(@kQNum)
       catch
         null
     return
   updateObjects: ->
-    @updateStatus()
     @updateObj o,true,document.querySelector "[k-id='#{o}']" for o in @updObjs
     if @kDispUpd
       @updateObj n,false,document.querySelector "[k-id='#{n}']" for n of @result when n
   updateObj: (n,isUpd,o) ->
     r = if @kDispUpd then @result[if isUpd then "" else n] else @result
+    @updObjWithRes n,o,r
+  updObjWithRes: (n,o,r) ->
     if !o
       a = new Function "x",n+" = x"
       try
