@@ -66,6 +66,7 @@ keval = (s) ->
   catch err
     null
 
+jsonpRegistry = {}
 
 class _KDBSrv extends HTMLElement
   createdCallback: ->
@@ -82,12 +83,13 @@ class _KDBSrv extends HTMLElement
     @hidden = true
     @ws = @wsReq = null
     @wsQueue = []
+    @rType = 'json' if @srvType is 'jsonp'
     console.log "kdb-srv inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
     if @target
       @target = (document.querySelector "[k-id='#{@target}']") || @target
   runQuery: (q,cb) ->
     (cb = (r,e) -> null) unless cb
-    return @sendHTTP q,cb if @srvType is 'http'
+    return @sendHTTP q,cb if @srvType in ['http','xhttp','jsonp']
     @sendWS q,cb
   sendWS: (qq,clb) ->
     @wsQueue.push q:qq, cb:clb
@@ -142,9 +144,20 @@ class _KDBSrv extends HTMLElement
   sendHTTP: (q,cb) ->
     if @fixJson
       @fixJson = null
-      @qPrefix = "jsn?enlist " unless @qPrefix
-      return @runQuery "{.h.tx[`jsn]:(.j.j');1}[]", (r,e) => @runQuery q, cb
-    @qPrefix = "json?enlist " if !@qPrefix and @srvType is "http" and @rType is "json"
+      @qPrefix = (if @srvType is 'jsonp' then 'jsp?' else "jsn?enlist ") unless @qPrefix
+      query = ".h.tx[`jsn]:(.j.j');"
+      query = '.h.tx[`jsp]:{enlist "KDB.processJSONP(\'",string[x 0],"\',",(.j.j x 1),")"};' if @srvType is 'jsonp'
+      query += 'if[105=type .h.hp;.h.hp:(f:{ssr[x y;"\nConnection: close";{"\nAccess-Control-Allow-Origin: *\r",x}]})[.h.hp];.h.he:f .h.he;.h.hy:{[a;b;c;d]a[b c;d]}[f;.h.hy]];' if @srvType is "xhttp"
+      return @runQuery "{#{query};1}[]", (r,e) => @runQuery q, cb
+    @qPrefix = (if @srvType is 'jsonp' then 'jsp?' else "json?enlist ") if !@qPrefix and @rType is "json"
+    if @srvType is 'jsonp'
+      q = @qPrefix + "(`#{rid = 'id'+Date.now()};#{encodeURIComponent q})"
+    else
+      q = @qPrefix + encodeURIComponent q
+    q = q + "&target=" + trg if @target and trg=extractInfo @target
+    q = 'http://' + @wsSrv + '/' + q if @srvType in ['xhttp','jsonp']
+    console.log "kdb-srv sending request:"+q if @debug
+    return @sendJSONP rid, q, cb if @srvType is 'jsonp'
     xhr = new XMLHttpRequest()
     xhr.onerror = =>
       console.log "kdb-srv error: "+xhr.statusText + " - " + xhr.responseText if @debug
@@ -165,11 +178,31 @@ class _KDBSrv extends HTMLElement
       catch err
         console.error "kdb-srv: HTTP callback exception"
         console.log err
-    q = @qPrefix + encodeURIComponent q
-    q = q + "&target=" + trg if @target and trg=extractInfo @target
-    console.log "kdb-srv sending request:"+q if @debug
     xhr.open 'GET', q, true, @srvUser, @srvPass
     xhr.send()
+  sendJSONP: (rid,q,cb) ->
+    resOk = false
+    jsonpRegistry[rid] = (res) =>
+      console.log "kdb-srv(jsonp) data: " + res.toString().slice(0,50) if @debug
+      delete jsonpRegistry[rid]
+      resOk = true
+      try
+        cb res, null
+      catch error
+        console.error "kdb-srv: HTTP callback exception"
+        console.log error
+    script = document.createElement('script')
+    script.onload = script.onerror = =>
+      return if resOk
+      delete jsonpRegistry[rid]
+      console.log "kdb-srv(jsonp): error" if @debug
+      try
+        cb null, "url: "+q
+      catch error
+        console.error "kdb-srv: HTTP callback exception"
+        console.log error
+    script.src = q
+    document.body.appendChild script
 
 class _KDBQuery extends HTMLElement
   createdCallback: ->
@@ -325,15 +358,15 @@ class _KDBTable extends HTMLElement
     @debug = @attributes['debug']?.textContent || null
     @escHtml = (@attributes['k-escape-html']?.textContent || 'true') == 'true'
     @kConfig = @attributes['k-config']?.textContent
-    kClass = @attributes['k-class']?.textContent || ""
-    kStyle = @attributes['k-style']?.textContent || ""
+    @kClass = @attributes['k-class']?.textContent || "kdb-table"
+    @kStyle = @attributes['k-style']?.textContent || ""
     @kSearch = (@attributes['k-search']?.textContent || 'false') == 'true'
     @inited = false
     if @kLib is 'jsgrid'
       @kCont = document.createElement 'div'
       cont = document.createElement 'div'
-      cont.className = kClass
-      cont.style.cssText = kStyle
+      cont.className = @kClass
+      cont.style.cssText = @kStyle
       cont.appendChild @kCont
       this.appendChild cont
     console.log "kdb-table: srv: #{@srv}, query: #{@query}, lib:#{@kLib}" if @debug
@@ -370,7 +403,7 @@ class _KDBTable extends HTMLElement
     return @updateJSGrid r if @kLib is 'jsgrid' and @kCfg?.pageLoading
     return if (r.length || 0) is 0
     return @updateJSGrid r if @kLib is 'jsgrid'
-    tbl = "<table class='kdb-table'><tr>"
+    tbl = "<table class='#{@kClass}' style='#{@kStyle}'><tr>"
     tbl += "<th>#{@escapeHtml c}</th>" for c of r[0]
     tbl += "</tr>"
     for e in r
@@ -789,9 +822,11 @@ class _KDBEditor extends HTMLElement
         @kEditor.navigateFileEnd()
         @kEditor.navigateLineEnd()
         @kEditor.insert r
-      @kEditor.gotoLine 0,0,false
+      @kEditor.navigateTo 0,0
     if cfg
-      @kEditor.gotoLine (cfg.row or 0),(cfg.column or 0),false if cfg.row? or cfg.column?
+      if cfg.row?
+        @kEditor.scrollToLine (cfg.row or 0), true, true, null
+        @kEditor.navigateTo (cfg.row or 0),(cfg.column or 0)
       if cfg.markers?
         (@kEditor.getSession().removeMarker m for m in @kMarkers) if @kMarkers
         Range = ace.require('./range').Range
@@ -822,6 +857,9 @@ class _KDBEditor extends HTMLElement
   onexec: (f) -> @addEventListener 'execText', f
 
 window.KDB ?= {}
+KDB.processJSONP = (id,res) ->
+  console.log "kdb-srv(JSONP): #{id}" + res if @debug
+  jsonpRegistry[id]?(res)
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
 KDB.KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
 KDB.KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)
