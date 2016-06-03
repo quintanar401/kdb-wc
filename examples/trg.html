@@ -12,19 +12,39 @@
 
 </head>
 <body>
-  <p>Redirect requests to this srv: </p>
+  <p>Start another srv.q on port 5567 for this example.</p>
+  <p>Redirect requests to this srv via k-target: </p>
   <select k-id="s">
-  <option value="1">server</option>
-  <option value="2">localhost:5567</option>
+  <option value="HTTPServer">HTTPServer</option>
+  <option value="localhost:5567">localhost:5567</option>
   </select>
   <button k-id='b'>Exec</button>
 
   <kdb-srv fix-json="true" k-target="s"></kdb-srv>
-  <kdb-query k-id='q' k-execute-on='load b'>([] src:system "p"; sym: 20?(5?`5);time:.z.T+til[20]*00:00:10; price: 20?40*20?1.0)</kdb-query>
-  <kdb-table k-query='q' debug="true"></kdb-table>
+  <kdb-query k-id='q' k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q'></kdb-table>
 
+  <p>Websockets can be redirected via k-target too.</p>
   <kdb-srv k-id="sws" k-srv-type="ws" k-target="s"></kdb-srv>
-  <kdb-query k-id='q2' k-srv="sws" k-execute-on='load b'>([] src:system "p"; sym: 20?(5?`5);time:.z.T+til[20]*00:00:10; price: 20?40*20?1.0)</kdb-query>
+  <kdb-query k-id='q2' k-srv="sws" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
   <kdb-table k-query='q2'></kdb-table>
+
+  <p>But you can connect to another server directly via k-srv-uri if you use websockets:</p>
+  <kdb-srv k-id="ws2" k-srv-type="ws" k-srv-uri="localhost:5567"></kdb-srv>
+  <kdb-query k-id='q3' k-srv="ws2" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q3'></kdb-table>
+
+  <p>You can exec cross domain http requests using Ajax via k-srv-type='xhttp' under certain conditions (special response header is needed).
+   Use k-srv-uri for srv name:port. If fix-json is on kdb-srv will automatically patch the default .h funcs to include this header.</p>
+  <kdb-srv k-id="h2" k-srv-type="xhttp" k-srv-uri="localhost:5567" fix-json="true"></kdb-srv>
+  <kdb-query k-id='q4' k-srv="h2" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q4'></kdb-table>
+
+  <p>Another way to exec the cross domain requests is JSONP - inject a script tag that will download data and execute a callback.
+     The server should support JSONP (fix-json will add jsp? handler to .z.ph). Use xhttp if possible as it is much cleaner.</p>
+  <kdb-srv debug="true" k-id="h3" k-srv-type="jsonp" k-srv-uri="localhost:5567" fix-json="true"></kdb-srv>
+  <kdb-query k-id='q5' k-srv="h3" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q5'></kdb-table>
+   
 </body>
 </html>

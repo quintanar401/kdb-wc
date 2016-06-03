@@ -1,3 +1,6 @@
+## 0.10.0
+* Add JSONP and Cross origin requests
+
 ## 0.9.1
 * add on-error to query
 * fix bugs and srv.q

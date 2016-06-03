@@ -39,11 +39,22 @@ All libraries can be found in `external` directory.
 
 ## kdb-srv
 
-The core of the library is `kdb-srv` component. It allows users to execute arbitrary queries either via an Ajax http request or via a websocket. It supports string and binary protocols for websockets and json, xml and sting data formats.
+The core of the library is `kdb-srv` component. It allows users to execute arbitrary queries either via an Ajax http request or via a websocket. It supports string
+and binary protocols for websockets and json, xml and sting data formats.
 
-`kdb-srv` can be used with the default .z.ph handler. You may need to add `fix-json` attribute if your .z.ph fails to process queries like 'json? query'.
+`kdb-srv` can be used with the default .z.ph handler. You may need to add `fix-json` attribute if your .z.ph fails to process queries like 'json? query' or if you want
+to use cross domain (CORS) requests.
 
-Websockets allow you to connect to any server not just the default one. You can even load your page as 'file://' and still be able to use them. You should though set the correct ws handler on the target server because the default .z.ws does nothing - use `srv.q` as an example.
+Websockets allow you to connect to any server not just the default one. You can even load your page as 'file://' and still be able to use them. You should though set
+the correct ws handler on the target server because the default .z.ws does nothing - use `srv.q` as an example.
+
+Some exotic http request methods are supported including cross origin requests (xhttp) and JSONP.
+
+xhttp requests require the server side support - you need to set `Access-Control-Allow-Origin` header. .h namespace can be automatically patched via `fix-json` attribute.
+
+JSONP requests also require the server side support (they are not restricted like xhttp requests but the server need to be aware of them). Your server (and your optional query prefix)
+must accept (\`id;query) string as an argument and return `KDB.processJSONP("id",jsObject)` string as the response. `fix-json` will inject the default implementation into
+.h namespace (jsp? prefix - it is also the default prefix in this case).
 
 Example:
 ```
@@ -55,15 +66,16 @@ Example:
 
 Supported attributes:
 * `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml`, `txt`.
-* `k-srv-type` - optional, ws or http (default).
+* `k-srv-type` - optional, ws, jsonp, xhttp or http (default). xhttp and jsonp mean cross origin requests and require `k-srv-uri` + server side support. ws - websockets.
 * `k-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
-* `k-srv-uri` - optional, target websocket server. Format: "host:port". By default it is the current web server.
+* `k-srv-uri` - optional, target websocket or xhttp server. Format: "host:port". By default it is the current web server.
 * `k-srv-user` - optional, a user for http requests.
 * `k-srv-pass` - optional, a password for http requests.
 * `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server. When the name is '' this option is ignored.
-* `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json? ` or `jsn? ` if it is not provided and the result type is `json`.
+* `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json?enlist ` or `jsn?enlist ` or `jsp?` if it is not provided and the result type is `json`.
 * `k-id` - optional, this id can be used to link other components to this one.
-* `fix-json` - optional, if it is set kdb-srv will send an additional query to fix a json serialization issue in the default .z.ph in kdb+ 3.2(it will set .h.tx[\`jsn] to .j.j').
+* `fix-json` - optional, if it is set kdb-srv will send an additional query to fix the json serialization issue in the default .z.ph in kdb+ 3.2(it will set .h.tx[\`jsn] to .j.j').
+  If srv type is xhttp it will also patch some .h functions to include the correct CORS (cross origin) header. If srv type is jsonp it will also add jsp handler to .h.tx.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
 Api:
@@ -116,7 +128,7 @@ Supported attributes:
 
 There are attributes that `kdb-query` understands on its target elements:
 * `k-append` - on text elements defines how the new result is added. Possible values: 'top', 'bottom', 'overwrite'.
-* `k-content-type` - text or html, how the result is added to an element: as html or text.
+* `k-content-type` - text or html, how the result is added to the element: as html or text.
 * `k-id` - this id can be used to link other components to `kdb-query`.
 
 Api:
@@ -211,7 +223,7 @@ KDBEditor is tightly integrated with `kdb-query` - you can use it as a source fo
 
 You can update a kdb-editor with a string or with an options object. Supported options:
 * `text` - optional new/additional text.
-* `row` - optional new row for the cursor (starts from 1).
+* `row` - optional new row for the cursor.
 * `column` - optional new column for the cursor.
 * `markers` - optional markers like {xy:[startRow startCol endRow endCol], class:"css_class", type:"text or fullLine or screenLine"}, class must have 'position:absolute'.
 * `annotations` - optional gutter annotations like {row:Num, text:"txt", html:"html", type:"error or warning or info"}

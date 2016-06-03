@@ -4,7 +4,7 @@ system "t 5000"
 
 .h.oldPh:.z.ph;
 
-.z.ph:{-1 "QUERY: ",x:$[type x;x;first x];
+.z.ph:{-1 "QUERY: ",.h.uh x:$[type x;x;first x];
   $[x like"*&target=*";@[{procReq ."&" vs last "?" vs x};x;{.h.he x}];.h.oldPh x]}
 
 procReq:{[q;t]

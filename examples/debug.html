@@ -37,17 +37,11 @@
       font-size:small;
     }
     .k-value {
-      min-width:100px;
       max-height:5em;
       overflow-y:auto;
       margin-left:0.3em;
-      margin-right:0.5em;
+      padding-right:20px;
       display:inline-block;
-    }
-    .k-value2 {
-      max-width:98%;
-      max-height:5em;
-      overflow:auto;
     }
     .k-console {
       overflow:auto;
@@ -92,29 +86,31 @@
          <label><input list="trgList" k-id="trgSrc" type="text"/>
            <datalist id="trgList" k-id="trgList"></datalist> target server</label>
 
-         <div style="float:right; display:inline-block;"><input type=button value="Refresh" k-id="refresh">
+         <div style="float:right; display:inline-block;">
+           <input type=button value="Inject" k-id="injectBtnTop">
+           <input type=button value="Refresh" k-id="refresh">
            <input type=button value="Help" onclick="uiData.user.help = true">
            <input type=button value="About" onclick="uiData.user.about = true">
          </div>
          <div style="margin-top:5px">
            <label><input type="checkbox" k-id="nexec"/> native execution </label>
            <label><input type="text" value="10000" size="4" k-id="nexcp" style="text-align: right;"/> exceptions to handle</label>
-           <label><input type="checkbox" checked="1" k-id="nodbg"/> ignore internal fns</label>
-           <label><input type="text" value="5" size="4" k-id="ntm" style="text-align: right;"/> timeout</label>
+           <label><input type="checkbox" checked="1" k-id="nodbg"/> ignore internal dbg fns</label>
+           <label><input type="text" value="5" size="4" k-id="ntm" style="text-align: right;"/> timeout(min)</label>
          </div>
   </form>
   <div style="width:40%; float:left;">
     <p style="margin-top:3px;">Enter expressions and press Ctr-E/Ctr-Enter to exec:</p>
-    <kdb-editor k-id="pad" k-config='{"readOnly":false}' k-style="width:600px; height:12em;"></kdb-editor>
+    <kdb-editor k-id="pad" k-config='{"readOnly":false}' k-style="width:100%; height:12em;"></kdb-editor>
     <p>
       Current status:<span k-id="status" k-content-type="html" style="margin-left:0.5em">unknown</span>,
       current function:<span k-id="currFn" style="margin-left:0.5em">unknown</span>
     </p>
     <kdb-editor k-id="fnView" k-style="width:100%; height:300px;" k-config='{"highlightActiveLine":false}'></kdb-editor>
     <p>Stack (click on funcs):</p>
-    <div class="k-lexer" k-id="stackView">
-      <div class="k-value2" v-for="item in stack[1]" @click="$event.kdetail = -1">{{{lexer.filter(item)}}}</div>
-      <div class="k-value2" v-for="item in stack[2]" @click="$event.kdetail = $index">{{{lexer.filter(item)}}}</div>
+    <div class="k-lexer" style="overflow-x:auto; width:100%;" k-id="stackView">
+      <div style="display:table-row;" v-for="item in stack[1]" @click="$event.kdetail = -1"><div style="display:table-cell;"><div class="k-value">{{{lexer.filter(item)}}}</div></div></div>
+      <div style="display:table-row;" v-for="item in stack[2]" @click="$event.kdetail = $index"><div style="display:table-cell;"><div class="k-value">{{{lexer.filter(item)}}}</div></div></div>
     </div>
   </div>
   <div style="width:58%; float:right; margin:10px; overflow-x:auto;">
@@ -132,7 +128,21 @@
 <div id="vueUI" @click="user={ help:false, about: false, failMsg:''}">
    <div v-show="user.help || user.about || waitUI || inject || user.failMsg" style="z-index: 1000; border: medium none; margin: 0px; padding: 0px; width: 100%; height: 100%; top: 0px; left: 0px; background-color: rgb(0, 0, 0); opacity: 0.6; cursor: wait; position: fixed;"></div>
    <div v-show="user.help" style="z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 80%; top: 10%; left: 10%; text-align: left; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255); cursor: default; height: 80%; overflow: auto;">
-     Some message
+     <h3> Init and Run buttons </h3> These buttons either init the debugger with an expression or execute an expression in it. Expression is taken from
+     the text editor below. The server should have .d2 namespace otherwise you will have to inject the debugger into the server.
+     <h3> Buttons 'Step Into', 'Step Over', 'Next Expr', 'Step Out', 'One Instr', 'Continue' </h3> Use these buttons in the debug mode to execute pieces of code.
+     <h3>Target server textbox</h3>
+       Use this field to set the target server for debugging. You can select logical names if your proxy (srv.q by default) supports them or you can enter host:port explicitly.
+     <h3>Inject button</h3> Injects the debugger Q code into .d2 namespace on the server if needed.
+     <h3>Refresh button</h3> Refreshes all views with the current state.
+     <h3>Help and About buttons</h3> Show help.
+     <h3>Settings toolbar</h3> Change these settings to fine tune the debugger.
+     <h3>Expressions editor</h3> Use this editor to enter expressions to debug then press Init or Run. You can also execute subexpressions using c-enter or c-e, the result will be printed into the console.
+     <h3>Function editor(readonly)</h3>The current debugged function will be shown in this editor. If you click on a stack entry a function from the stack will be shown.
+      You also can see the current line and expression. You can use c-enter and c-e to execute expressions from this editor, the result will be printed in the console.
+     <h3>Stack</h3> You can see here the current stack + call stack. If you click on a function its state will be shown in other windows.
+     <h3>Variables</h3> Current variables.
+     <h3>Console</h3> All results are printed here. You can click on values to execute them on the server.
    </div>
    <div v-show="user.about" style="z-index: 1011; position: fixed; padding: 0px; margin: 0px; width: 20%; top: 40%; left: 40%; text-align: center; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
      Debug.html<br>
@@ -144,7 +154,7 @@
    </div>
    <div v-show="inject" style="z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 30%; top: 40%; left: 35%; text-align: center; color: rgb(0, 0, 0); border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
      Couldn't detect the debugger on this instance. <br> Press inject to inject it in order to proceed. <br><br>
-     <button k-id="inject">Inject</button>
+     <button k-id="injectBtn">Inject</button>
    </div>
    <div v-show="user.failMsg" style="font-size:18px; z-index: 1011; position: fixed; padding: 20px; margin: 0px; width: 30%; top: 40%; left: 35%; text-align: center; color:red; border: 3px solid rgb(170, 170, 170); background-color: rgb(255, 255, 255);">
       Failure: {{ user.failMsg }}
@@ -161,28 +171,29 @@
     var resultFilter = function(r) { if (r.console) r.console = KDB.KDBLexer.filter(r.console); return r;};
 </script>
 
-<kdb-query k-dispatch-update="true" k-on-error="console uiData.user.failMsg">$[`d2 in key `;enlist[`getStatus]!enlist 1b;enlist[`uiData.inject]!enlist 1b]</kdb-query>
+<kdb-query k-execute-on="injectBtnTop" k-dispatch-update="true" k-on-error="console uiData.user.failMsg">$[`d2 in key `;enlist[`getStatus]!enlist 1b;enlist[`uiData.inject]!enlist 1b]</kdb-query>
 <kdb-query k-srv="httpSrv" k-update-elements="trgList" k-on-error="console uiData.user.failMsg">@[{string key trgMap};::;()]</kdb-query>
-<kdb-query k-execute-on="inject" k-dispatch-update="true" k-escape-q="true" k-on-error="console uiData.user.failMsg">@[{value x;``uiData.inject!(0;0b)};"$dbgCode$";{`uiData.inject`uiData.user.failMsg!(0b;x)}]</kdb-query>
+<kdb-query k-execute-on="injectBtn" k-dispatch-update="true" k-escape-q="true" k-on-error="console uiData.user.failMsg">@[{value x;``uiData.inject!(0;0b)};"$dbgCode$";{`uiData.inject`uiData.user.failMsg!(0b;x)}]</kdb-query>
 <kdb-query k-execute-on="fnView console pad" k-update-elements="console" k-escape-q="true" k-filter="KDB.KDBLexer" k-status-var="uiData.wait" k-on-error="console uiData.user.failMsg">@[{t:.z.P;v:.Q.s value x;v,"Time: ",string[.z.P-t],"\n"};"$txt$";{"Exception: ",x,"\n"}]," "</kdb-query>
 
-<kdb-query k-id="getStatus" k-dispatch-update="true" k-execute-on="stackView .d2.i .d2.r .d2.nxt .d2.nexp .d2.l .d2.s .d2.cont refresh" k-escape-q="true"
+<kdb-query k-id="getStatus" k-dispatch-update="true" k-execute-on="stackView .d2.i .d2.r .d2.nxt .d2.nexp .d2.l .d2.s .d2.ef .d2.cont refresh" k-escape-q="true"
    k-status-var="uiData.wait" k-on-error="console uiData.user.failMsg" k-filter="resultFilter">
-   {[x;y;z;e] 0N!(x;y;z;e);X::.z.s;
+    {[x;y;z;e]
+     if[not `d2 in key `;: enlist[`uiData.inject]!enlist 1b];
      status:{
        ctx:{ctx:.d2`fr`sTop; if[x;.d2.fr:{x 3}/[x;.d2.fr]; .d2.sTop:.d2.fr 4]; r:y x; .d2.fr:ctx 0; .d2.sTop:ctx 1; r};
        psn:{n:.d2.sTop-7; ($[x;enlist[" return back"];()],n#r;n _r:reverse .d2.pstk 100)};
        st:{("";"&lt;span style='color:red;'&gt;exception ",.d2.fr[4],"&lt;/span&gt;";"breakpoint";"";"";"running").d2.fr 2};
        cfn:{`anonymous^.d2.fmap first .d2.fr[6;0]};
        arg:{.Q.s each .d2.v[x]};
-       f:{j:.d2.txt0[f:.d2.fr[6;0]].d2.fr 1;f:string f;(enlist[`text]!enlist f),$[count j;`row`column`markers!(1+c 0;c 1;enlist `xy`type`class!(c:raze {(sum"\n"=y#x;(reverse y#x)?"\n")}[f]each(min;1+max@)@\:j;`text;"k-expr"));()]};
+       f:{j:.d2.txt0[f:.d2.fr[6;0]].d2.fr 1;f:string f;(enlist[`text]!enlist f),$[count j;`row`column`markers!(c 0;c 1;enlist `xy`type`class!(c:raze {(sum"\n"=y#x;(reverse y#x)?"\n")}[f]each(min;1+max@)@\:j;`text;"k-expr"));()]};
        `fnView`execData.stack`status`currFn`execData.args!($[count x;x _;::]ctx[y;f];y,ctx[y;psn];st[];ctx[y;cfn];arg[y])};
      st0:{`fnView`execData.stack`status`currFn`execData.args!("Not running";(0;();());"not running";"unknown";()!())};
      fid:{$[0=.d2.fr 2;x;.d2.fr 7]};
      if[x~`stackView; z:z+1+n:"I"$y; if[n<0;z:0]];
      if[x~`refresh; z:0];
      if[x like ".d2.*";
-       v:$[ir:x in `.d2.i`.d2.r;({(value x)[]};enlist"{[] ",e[2],"}");(),::]; id:fid 0; .d2.na: e 0; .d2.e: e 1; .d2.nodbg: e 3; .d2.tm: e 4;
+       v:$[ir:x in `.d2.i`.d2.r;({(value x)[]};enlist"{[] ",e[2],"}");(),::]; id:fid 0; .d2.na: e 0; .d2.e: e 1; .d2.noDbg: e 3; .d2.tm: e 4;
        if[(not ir)&0=.d2.fr 2; :st0[]];
        r:.[value x;v;::];
        if[0=.d2.fr 2; s:st0[]; s[`console]: .Q.s r; :s];
