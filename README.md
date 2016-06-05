@@ -19,6 +19,8 @@ To use this library include `kdb-wc.js` into your html page:
 <script type="text/javascript" src="kdb-wc.js"></script>
 ```
 
+Components: `kdb-srv`, `kdb-query`, `kdb-table`, `kdb-chart`, `kdb-editor`, `KDBLex`.
+
 # Requirements
 
 The library should work with IE10 (maybe IE9 too), the latest Firefox and Chrome and probably all other modern browsers.
@@ -103,7 +105,8 @@ Example:
 You can provide parameters to the query by using $paramKID$ format. All such entries will be substituted with the target value. Supported targets include `kdb-editor`,`select`, `textarea`, `input` with types `text`, `password`, `radio`, `checkbox` and any other element with the meaningful textContent (`span` for example).
 
 There are also special parameters: use $i$ to refer to the number of executions (can be useful with `k-interval`), $src$ refers to the initiator of the update or `self`, $txt$ refers to the
-data obtained from the initiator of the event (`load`, `timer` if src is self), $id$ refers to the k-id of the initiator, $pres$ - previous result.
+data obtained from the initiator of the event (`load`, `timer` if src is self), $id$ refers to the k-id of the initiator, $pres$ - previous result. It is also possible to add `k-attr` attribute
+to the event source, these attributes will be added to the query parameters (see params example).
 
 `kdb-query` can update other elements with its result. The result should have the correct format - string for text elements or `kdb-editor`, list of objects (table) for `kdb-table` and `kdb-chart`,
  string array for `select` or `datalist`. It can also update any element that has `kdbUpd` function. There are 3 way the update may be done:
@@ -136,6 +139,7 @@ Api:
 * `setupQuery()` - call it after you change the attributes.
 * `runQuery(args)` - run the query if it was not run before. Args is an optional object like {param1:val1, ...}.
 * `rerunQuery(args)` - rerun the query.
+* `KDB.rerunQuery(kID,args)` - rerun a query with the specific k-id (onclick="KDB.rerunQuery('id1',{data:10})").
 
 ## kdb-table
 
@@ -213,7 +217,7 @@ Supported attributes:
 * `k-id` - optional, this id can be used to link other components to this one.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
-## KDBEditor
+## kdb-editor
 
 KDBEditor is based on Ace editor. Q language mode and one theme are provided in `external` directory. If you want to use other language modes and/or other themes download them from the Ace github repository and put them in the same directory where `ace.js` is (they should be noconflict or noconflict-min).
 

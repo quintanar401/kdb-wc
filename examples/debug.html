@@ -193,11 +193,10 @@
      if[x~`stackView; z:z+1+n:"I"$y; if[n<0;z:0]];
      if[x~`refresh; z:0];
      if[x like ".d2.*";
-       v:$[ir:x in `.d2.i`.d2.r;({(value x)[]};enlist"{[] ",e[2],"}");(),::]; id:fid 0; .d2.na: e 0; .d2.e: e 1; .d2.noDbg: e 3; .d2.tm: e 4;
+       v:$[ir:x in `.d2.i`.d2.r;({(value x)[]};enlist"{[] ",e[2],"}");(),::];id:fid 0;.d2.na:e 0;.d2.e:e 1;.d2.noDbg:e 3;.d2.tm:e 4;
        if[(not ir)&0=.d2.fr 2; :st0[]];
        r:.[value x;v;::];
        if[0=.d2.fr 2; s:st0[]; s[`console]: .Q.s r; :s];
-       s:status[$[not[ir]&id~fid 1;`text;()];z];
        if[(0&lt;.d2.fr 2)&10=type r; s[`uiData.user.failMsg]:enlist "Internal exception: ",r];
        :s;
      ];

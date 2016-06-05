@@ -35,13 +35,16 @@
 
   <p>Click on this span to rerun the same query. <span k-id="sp1" style='color:red'><b>Click me</b></span></p>
 
-  <p>Buttons also can be used to rerun queries. This button will trigger another query that in its turn will trigger the first one <button k-id="bt1">Rerun</button></p>
+  <p>Buttons also can be used to rerun queries. This button will trigger another query that in its turn will trigger the first one <button k-id="bt1" k-attr="k-id">Rerun</button></p>
 
   <p>Results($src$,$id$,$i$,$txt$,$pres$):</p>
   <pre k-id="pre" k-append="bottom"></pre>
 
-  <kdb-query k-execute-on="bt1" k-id="qu2" k-escape-q="true" k-update-elements="pre">"Query2. Src: $src$, id:$id$, iter:$i$, txt:$txt$"</kdb-query>  
-  <kdb-query k-execute-on="ed1 sp1 qu2" k-escape-q="true" k-update-elements="pre">"Query1. Src: $src$, id:$id$, iter:$i$, txt:$txt$, prevRes:$pres$"</kdb-query>
+  <kdb-query k-attr="k-id k-update-elements" k-execute-on="bt1" k-id="qu2" k-escape-q="true" k-update-elements="pre">"Query2. Src: $src$, id:$id$, iter:$i$, txt:$txt$"</kdb-query>  
+  <kdb-query k-attr="k-id k-update-elements" k-id="qu1" k-execute-on="ed1 sp1 qu2" k-escape-q="true" k-update-elements="pre">"Query1. Src: $src$, id:$id$, iter:$i$, txt:$txt$, prevRes:$pres$"</kdb-query>
 
+  <p> You can use k-attr to pass some attribute value into a query:</p>
+  <kdb-query k-update-elements="pre2" k-execute-on="qu1 qu2 bt1">"This query gets attributes from other event sources: k-id - $k-id$, k-update-elements - $k-update-elements$"</kdb-query>
+  <pre k-id="pre2" k-append="bottom"></pre>  
 </body>
 </html>

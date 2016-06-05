@@ -1,3 +1,7 @@
+## 0.10.1
+* add k-attr
+* fixes
+
 ## 0.10.0
 * Add JSONP and Cross origin requests
 

@@ -238,7 +238,7 @@ class _KDBQuery extends HTMLElement
         document.addEventListener "DOMContentLoaded", (ev) => @runQuery src:"self", txt:"load"
     for el in @exec when !(el in ['load','manual','timer'])
       @addUpdater(v,el) if v = document.querySelector "[k-id='#{el}']"
-    @kRefs = @query.match(/\$(\w|\.)(\w|\.|\]|\[)*\$/g)?.map (e) -> e.slice 1,e.length-1
+    @kRefs = @query.match(/\$(\w|\.)(\w|\.|\]|\[|\-)*\$/g)?.map (e) -> e.slice 1,e.length-1
     @kMap = null
     if 'timer' in @exec
       setTimeout (=> @rerunQuery src:"self", txt:"timer"), if @kDelay then @kDelay else @kInterval
@@ -278,15 +278,19 @@ class _KDBQuery extends HTMLElement
   onresult: (f) ->
     @addEventListener 'newResult', f
     f @getEv() if @result isnt null
+  setQueryParams: (o,c2) ->
+    c1 = {}
+    c1[n] = o.attributes[n].textContent || "" for n in attrs.split(' ').filter((e)-> e.length > 0)
+    mergeCfgs c1,c2
   addUpdater: (v,kid) ->
     if v.nodeName is 'BUTTON'
-      v.addEventListener 'click', (ev) => @rerunQuery src:'button', id: kid
+      v.addEventListener 'click', (ev) => @rerunQuery @setQueryParams v, src:'button', id: kid
     else if v.nodeName is 'KDB-EDITOR'
-      v.onexec (ev) => @rerunQuery  src:'editor', id: kid, txt: ev.detail
+      v.onexec (ev) => @rerunQuery @setQueryParams v, src:'editor', id: kid, txt: ev.detail
     else if v.nodeName is 'KDB-QUERY'
-      v.onresult (ev) => @rerunQuery  src:'query', id: kid, txt: ev.detail
+      v.onresult (ev) => @rerunQuery @setQueryParams v, src:'query', id: kid, txt: ev.detail
     else
-      v.addEventListener 'click', (ev) => @rerunQuery src:v.nodeName, id: kid, txt: if (typeof ev.kdetail isnt "undefined" and ev.kdetail isnt null) then ev.kdetail else  ev.target?.textContent
+      v.addEventListener 'click', (ev) => @rerunQuery @setQueryParams v, src:v.nodeName, id: kid, txt: if (typeof ev.kdetail isnt "undefined" and ev.kdetail isnt null) then ev.kdetail else  ev.target?.textContent
   kdbUpd: (r,kid) -> @rerunQuery  src:'query', id: kid, txt: r
   updateStatus: ->
     if @kQStatus
@@ -333,6 +337,7 @@ class _KDBQuery extends HTMLElement
       else
         if a is 'top' then o.innerHTML = r.toString()+s+o.innerHTML else if a is 'bottom' then o.innerHTML += s+r.toString() else o.innerHTML = r.toString()
   resolveRefs: (q,args)->
+    console.log args if @debug
     return q unless @kRefs
     if !@kMap
       @kMap = {}
@@ -860,6 +865,7 @@ window.KDB ?= {}
 KDB.processJSONP = (id,res) ->
   console.log "kdb-srv(JSONP): #{id}" + res if @debug
   jsonpRegistry[id]?(res)
+KDB.rerunQuery = (kID,args) -> document.querySelector("[k-id='#{kID}']")?.rerunQuery args
 KDB.KDBChart = document.registerElement('kdb-chart', prototype: _KDBChart.prototype)
 KDB.KDBSrv = document.registerElement('kdb-srv', prototype: _KDBSrv.prototype)
 KDB.KDBQuery = document.registerElement('kdb-query', prototype: _KDBQuery.prototype)

@@ -479,7 +479,7 @@
           }
         }
       }
-      this.kRefs = (ref15 = this.query.match(/\$(\w|\.)(\w|\.|\]|\[)*\$/g)) != null ? ref15.map(function(e) {
+      this.kRefs = (ref15 = this.query.match(/\$(\w|\.)(\w|\.|\]|\[|\-)*\$/g)) != null ? ref15.map(function(e) {
         return e.slice(1, e.length - 1);
       }) : void 0;
       this.kMap = null;
@@ -581,45 +581,61 @@
       }
     };
 
+    _KDBQuery.prototype.setQueryParams = function(o, c2) {
+      var attrs, c1, j, len, n, ref, ref1;
+      if (!(attrs = (ref = o.attributes['k-attr']) != null ? ref.textContent : void 0)) {
+        return c2;
+      }
+      c1 = {};
+      ref1 = attrs.split(' ').filter(function(e) {
+        return e.length > 0;
+      });
+      for (j = 0, len = ref1.length; j < len; j++) {
+        n = ref1[j];
+        c1[n] = o.attributes[n].textContent || "";
+      }
+      return mergeCfgs(c1, c2);
+    };
+
     _KDBQuery.prototype.addUpdater = function(v, kid) {
       if (v.nodeName === 'BUTTON') {
         return v.addEventListener('click', (function(_this) {
           return function(ev) {
-            return _this.rerunQuery({
+            return _this.rerunQuery(_this.setQueryParams(v, {
               src: 'button',
               id: kid
-            });
+            }));
           };
         })(this));
       } else if (v.nodeName === 'KDB-EDITOR') {
         return v.onexec((function(_this) {
           return function(ev) {
-            return _this.rerunQuery({
+            return _this.rerunQuery(_this.setQueryParams(v, {
               src: 'editor',
               id: kid,
               txt: ev.detail
-            });
+            }));
           };
         })(this));
       } else if (v.nodeName === 'KDB-QUERY') {
         return v.onresult((function(_this) {
           return function(ev) {
-            return _this.rerunQuery({
+            return _this.rerunQuery(_this.setQueryParams(v, {
               src: 'query',
               id: kid,
               txt: ev.detail
-            });
+            }));
           };
         })(this));
       } else {
         return v.addEventListener('click', (function(_this) {
           return function(ev) {
             var ref;
-            return _this.rerunQuery({
+            return _this.rerunQuery(_this.setQueryParams(v, {
               src: v.nodeName,
               id: kid,
               txt: typeof ev.kdetail !== "undefined" && ev.kdetail !== null ? ev.kdetail : (ref = ev.target) != null ? ref.textContent : void 0
-            });
+            }));
           };
         })(this));
       }
@@ -725,6 +741,9 @@
 
     _KDBQuery.prototype.resolveRefs = function(q, args) {
       var e, j, len, n, ref, ref1, txt, v, val;
+      if (this.debug) {
+        console.log(args);
+      }
       if (!this.kRefs) {
         return q;
       }
@@ -1900,6 +1919,11 @@
       console.log(("kdb-srv(JSONP): " + id) + res);
     }
     return typeof jsonpRegistry[id] === "function" ? jsonpRegistry[id](res) : void 0;
+  };
+
+  KDB.rerunQuery = function(kID, args) {
+    var ref;
+    return (ref = document.querySelector("[k-id='" + kID + "']")) != null ? ref.rerunQuery(args) : void 0;
   };
 
   KDB.KDBChart = document.registerElement('kdb-chart', {
