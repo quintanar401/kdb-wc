@@ -279,6 +279,7 @@ class _KDBQuery extends HTMLElement
     @addEventListener 'newResult', f
     f @getEv() if @result isnt null
   setQueryParams: (o,c2) ->
+    return c2 unless attrs = o.attributes['k-attr']?.textContent
     c1 = {}
     c1[n] = o.attributes[n].textContent || "" for n in attrs.split(' ').filter((e)-> e.length > 0)
     mergeCfgs c1,c2

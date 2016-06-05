@@ -197,6 +197,7 @@
        if[(not ir)&0=.d2.fr 2; :st0[]];
        r:.[value x;v;::];
        if[0=.d2.fr 2; s:st0[]; s[`console]: .Q.s r; :s];
+       s:status[$[(z=0)&amp;not[ir]&id~fid 1;`text;()];0];
        if[(0&lt;.d2.fr 2)&10=type r; s[`uiData.user.failMsg]:enlist "Internal exception: ",r];
        :s;
      ];
