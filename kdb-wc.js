@@ -598,6 +598,7 @@
     };
 
     _KDBQuery.prototype.addUpdater = function(v, kid) {
+      var ref;
       if (v.nodeName === 'BUTTON') {
         return v.addEventListener('click', (function(_this) {
           return function(ev) {
@@ -627,14 +628,24 @@
             }));
           };
         })(this));
-      } else {
-        return v.addEventListener('click', (function(_this) {
+      } else if ((ref = v.nodeName) === 'SELECT' || ref === 'TEXTAREA' || ref === 'INPUT') {
+        return v.addEventListener('change', (function(_this) {
           return function(ev) {
-            var ref;
             return _this.rerunQuery(_this.setQueryParams(v, {
               src: v.nodeName,
               id: kid,
-              txt: typeof ev.kdetail !== "undefined" && ev.kdetail !== null ? ev.kdetail : (ref = ev.target) != null ? ref.textContent : void 0
+              txt: extractInfo(v)
+            }));
+          };
+        })(this));
+      } else {
+        return v.addEventListener('click', (function(_this) {
+          return function(ev) {
+            var ref1;
+            return _this.rerunQuery(_this.setQueryParams(v, {
+              src: v.nodeName,
+              id: kid,
+              txt: typeof ev.kdetail !== "undefined" && ev.kdetail !== null ? ev.kdetail : (ref1 = ev.target) != null ? ref1.textContent : void 0
             }));
           };
         })(this));

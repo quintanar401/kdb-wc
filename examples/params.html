@@ -37,11 +37,18 @@
 
   <p>Buttons also can be used to rerun queries. This button will trigger another query that in its turn will trigger the first one <button k-id="bt1" k-attr="k-id">Rerun</button></p>
 
+  <p>Select change event can trigger a query (but you should first select something) <select k-id="sel"><option value="value1">value1</option><option value="value2">value2</option></select><p>
+
+  <p>The same is true for all other objects that can be used for the query params. For example text input with datalist:
+     <input list="dlist" type="text" k-id="inlist"></input>
+     <datalist id="dlist"><option value="listval1">listval1</option><option value="listval2">listval2</option></datalist>  
+  </p>
+
   <p>Results($src$,$id$,$i$,$txt$,$pres$):</p>
   <pre k-id="pre" k-append="bottom"></pre>
 
   <kdb-query k-attr="k-id k-update-elements" k-execute-on="bt1" k-id="qu2" k-escape-q="true" k-update-elements="pre">"Query2. Src: $src$, id:$id$, iter:$i$, txt:$txt$"</kdb-query>  
-  <kdb-query k-attr="k-id k-update-elements" k-id="qu1" k-execute-on="ed1 sp1 qu2" k-escape-q="true" k-update-elements="pre">"Query1. Src: $src$, id:$id$, iter:$i$, txt:$txt$, prevRes:$pres$"</kdb-query>
+  <kdb-query k-attr="k-id k-update-elements" k-id="qu1" k-execute-on="ed1 sp1 qu2 sel inlist" k-escape-q="true" k-update-elements="pre">"Query1. Src: $src$, id:$id$, iter:$i$, txt:$txt$, prevRes:$pres$"</kdb-query>
 
   <p> You can use k-attr to pass some attribute value into a query:</p>
   <kdb-query k-update-elements="pre2" k-execute-on="qu1 qu2 bt1">"This query gets attributes from other event sources: k-id - $k-id$, k-update-elements - $k-update-elements$"</kdb-query>

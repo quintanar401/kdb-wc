@@ -117,7 +117,7 @@ to the event source, these attributes will be added to the query parameters (see
 Supported attributes:
 * `k-query` - optional, a query can be set either in this attribute or between the tags like in the example above.
 * `k-srv` - optional, link to a `kdb-srv`. If it is not set the first available `kdb-srv` component will be used.
-* `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button or some other html element - execute on click, k-id of `kdb-editor` - execute on its exec event, k-id of another query - execute after it (its result is available via $txt$).
+* `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button or some other html element - execute on click (buttons and unknown elements) or change event (inputs, select and etc), k-id of `kdb-editor` - execute on its exec event, k-id of another query - execute after it (its result is available via $txt$).
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or can provide their `k-id` or var names in this attribute, in this way you can update arbitrary html elements.
 * `k-dispatch-update` - optional, if true the result must be a list with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
 * `k-status-var` - optional, report the current number of running queries into this JS variable.
