@@ -129,7 +129,7 @@
       var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srvType = ((ref = this.attributes['k-srv-type']) != null ? ref.textContent : void 0) || "http";
       this.target = ((ref1 = this.attributes['k-target']) != null ? ref1.textContent : void 0) || null;
-      this.wsSrv = ((ref2 = this.attributes['k-srv-uri']) != null ? ref2.textContent : void 0) || location.host;
+      this.wsSrv = this.srvType === 'http' ? location.host : ((ref2 = this.attributes['k-srv-uri']) != null ? ref2.textContent : void 0) || location.host;
       this.srvUser = ((ref3 = this.attributes['k-srv-user']) != null ? ref3.textContent : void 0) || null;
       this.srvPass = ((ref4 = this.attributes['k-srv-pass']) != null ? ref4.textContent : void 0) || null;
       this.qPrefix = ((ref5 = this.attributes['k-prefix']) != null ? ref5.textContent : void 0) || "";
@@ -271,7 +271,7 @@
     };
 
     _KDBSrv.prototype.sendHTTP = function(q, cb) {
-      var query, ref, rid, trg, xhr;
+      var query, rid, trg, xhr;
       if (this.fixJson) {
         this.fixJson = null;
         if (!this.qPrefix) {
@@ -301,9 +301,7 @@
       if (this.target && (trg = extractInfo(this.target))) {
         q = q + "&target=" + trg;
       }
-      if ((ref = this.srvType) === 'xhttp' || ref === 'jsonp') {
-        q = 'http://' + this.wsSrv + '/' + q;
-      }
+      q = 'http://' + this.wsSrv + '/' + q;
       if (this.debug) {
         console.log("kdb-srv sending request:" + q);
       }

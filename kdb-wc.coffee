@@ -72,7 +72,7 @@ class _KDBSrv extends HTMLElement
   createdCallback: ->
     @srvType = @attributes['k-srv-type']?.textContent || "http"
     @target = @attributes['k-target']?.textContent || null
-    @wsSrv = @attributes['k-srv-uri']?.textContent || location.host
+    @wsSrv = if @srvType is 'http' then location.host else (@attributes['k-srv-uri']?.textContent || location.host)
     @srvUser = @attributes['k-srv-user']?.textContent || null
     @srvPass = @attributes['k-srv-pass']?.textContent || null
     @qPrefix = @attributes['k-prefix']?.textContent || ""
@@ -155,7 +155,7 @@ class _KDBSrv extends HTMLElement
     else
       q = @qPrefix + encodeURIComponent q
     q = q + "&target=" + trg if @target and trg=extractInfo @target
-    q = 'http://' + @wsSrv + '/' + q if @srvType in ['xhttp','jsonp']
+    q = 'http://' + @wsSrv + '/' + q
     console.log "kdb-srv sending request:"+q if @debug
     return @sendJSONP rid, q, cb if @srvType is 'jsonp'
     xhr = new XMLHttpRequest()
