@@ -291,6 +291,7 @@ class _KDBQuery extends HTMLElement
     else if v.nodeName is 'KDB-QUERY'
       v.onresult (ev) => @rerunQuery @setQueryParams v, src:'query', id: kid, txt: ev.detail
     else if v.nodeName in ['SELECT','TEXTAREA','INPUT']
+      v.addEventListener 'change', (ev) => @rerunQuery @setQueryParams v, src:v.nodeName, id: kid, txt: extractInfo v
     else
       v.addEventListener 'click', (ev) => @rerunQuery @setQueryParams v, src:v.nodeName, id: kid, txt: if (typeof ev.kdetail isnt "undefined" and ev.kdetail isnt null) then ev.kdetail else  ev.target?.textContent
   kdbUpd: (r,kid) -> @rerunQuery  src:'query', id: kid, txt: r

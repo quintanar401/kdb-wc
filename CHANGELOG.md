@@ -1,4 +1,5 @@
 ## 0.10.2
+* execute query on change event for some elements
 
 ## 0.10.1
 * add k-attr
