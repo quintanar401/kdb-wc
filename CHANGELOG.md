@@ -1,3 +1,6 @@
+## 0.11.0
+* Add Datatables library
+
 ## 0.10.3
 * fix AJAX urls
 

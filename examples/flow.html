@@ -22,7 +22,7 @@
 
   <p>If C3 config is used all settings are up to you. Provide C3 compatible flow config.</p>
   <kdb-query k-update-elements='c1'>enlist[`data]!enlist enlist[`columns]!enlist (("data1";30;200;100;400;150;250);("data2";50;20;10;40;15;25))</kdb-query>
-  <kdb-query k-update-elements='c1' k-interval='2000' debug='true'
+  <kdb-query k-update-elements='c1' k-interval='2000'
     k-execute-on='timer'>`columns`length!((`data1,2?100;`data2,2?100);2)</kdb-query>  
   <kdb-chart k-style='width:800px;height:400px;' k-id="c1" k-flow="true"></kdb-chart>
 

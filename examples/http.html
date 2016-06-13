@@ -13,11 +13,11 @@
 </head>
 <body>
   <p>There is one http kdb-srv object that uses Ajax to send requests and expects the result in json format. It also automatically fixes kdb 3.2 issue with "json?query"</p>
-  <kdb-srv k-srv-type="http" fix-json=true debug="true"></kdb-srv>
-  <kdb-query k-id="q1" debug="true">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;b&gt;BOLD&lt;/b&gt;l"))</kdb-query>
+  <kdb-srv k-srv-type="http" fix-json="true"></kdb-srv>
+  <kdb-query k-id="q1">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;b&gt;BOLD&lt;/b&gt;l"))</kdb-query>
   <p>Both tables are linked to the same query but the second table does not escape html chars.</p>
-  <kdb-table k-query="q1" debug="true"></kdb-table>
-  <kdb-table k-query="q1" k-escape-html="false" debug="true"></kdb-table>
+  <kdb-table k-query="q1"></kdb-table>
+  <kdb-table k-query="q1" k-escape-html="false"></kdb-table>
 </body>
 </html>
 

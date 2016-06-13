@@ -370,11 +370,12 @@ class _KDBTable extends HTMLElement
     @kStyle = @attributes['k-style']?.textContent || ""
     @kSearch = (@attributes['k-search']?.textContent || 'false') == 'true'
     @inited = false
-    if @kLib is 'jsgrid'
-      @kCont = document.createElement 'div'
+    if @kLib in ['jsgrid','datatables']
+      @kCont = document.createElement if @kLib is 'jsgrid' then 'div' else 'table'
       cont = document.createElement 'div'
       cont.className = @kClass
       cont.style.cssText = @kStyle
+      @kCont.style.cssText = "width: 100%;" if @kLib is 'datatables'
       cont.appendChild @kCont
       this.appendChild cont
     console.log "kdb-table: srv: #{@srv}, query: #{@query}, lib:#{@kLib}" if @debug
@@ -396,11 +397,11 @@ class _KDBTable extends HTMLElement
       return unless @query?.runQuery
       @query.onresult (ev) => @onResult ev
       console.log "kdb-table: init complete" if @debug
-      if @kLib is 'jsgrid' and @kConfig
+      if @kLib in ['jsgrid','datatables'] and @kConfig
         cfg = getConfig @kConfig
-        return unless cfg?.pageLoading
-        console.log "kdb-table: pageLoading is set, forcing the first page" if @debug
-        @query.rerunQuery start: 0, size: 1, sortBy:"", sortOrder:""
+        return unless cfg?.pageLoading or cfg?.serverSide
+        console.log "kdb-table: pageLoading/serverSide is set, forcing the first page" if @debug
+        @query.rerunQuery start: 0, size: 1, sortBy:"", sortOrder:"", data: null
   onResult: (ev) ->
     console.log "kdb-table: got event" if @debug
     @updateTbl ev.detail
@@ -409,8 +410,10 @@ class _KDBTable extends HTMLElement
     console.log "kdb-table: data" if @debug
     console.log r if @debug
     return @updateJSGrid r if @kLib is 'jsgrid' and @kCfg?.pageLoading
+    return @updateDT r if @kLib is 'datatables' and @kCfg?.serverSide
     return if (r.length || 0) is 0
     return @updateJSGrid r if @kLib is 'jsgrid'
+    return @updateDT r if @kLib is 'datatables'
     tbl = "<table class='#{@kClass}' style='#{@kStyle}'><tr>"
     tbl += "<th>#{@escapeHtml c}</th>" for c of r[0]
     tbl += "</tr>"
@@ -456,6 +459,31 @@ class _KDBTable extends HTMLElement
     console.log "kdb-table: cfg" if @debug
     console.log cfg if @debug
     $(@kCont).jsGrid cfg
+  updateDT: (r) ->
+    if @kCfg?.serverSide
+      @kCB r
+      return @kCB = null
+    c = []
+    for n,v of r[0]
+      c.push data: n, title: n
+    cfg =
+      columns: c
+      searching: @kSearch
+      scrollX: true
+      processing: true
+    cfg = mergeCfgs cfg, getConfig @kConfig if @kConfig
+    @kCfg = cfg
+    cfg.paging = r.length>100 or (cfg.serverSide || false) unless cfg.paging?
+    if cfg.serverSide
+      cfg.ajax = (d,cb,set) =>
+        @kCB = cb
+        @query.rerunQuery data: JSON.stringify d
+    else
+      cfg.data = r
+    if @debug
+      console.log "kdb-table: cfg"
+      console.log cfg
+    $(@kCont).DataTable cfg
   loadData: (f) ->
     if f.pageIndex
       @query.rerunQuery start: (f.pageIndex-1)*f.pageSize, size: f.pageSize, sortBy: f.sortField or "", sortOrder: f.sortOrder or 'asc'

@@ -807,7 +807,7 @@
     }
 
     _KDBTable.prototype.createdCallback = function() {
-      var cont, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8;
+      var cont, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srv = ((ref = this.attributes['k-srv']) != null ? ref.textContent : void 0) || "";
       this.query = ((ref1 = this.attributes['k-query']) != null ? ref1.textContent : void 0) || this.textContent;
       this.kLib = ((ref2 = this.attributes['k-lib']) != null ? ref2.textContent : void 0) || 'table';
@@ -818,11 +818,14 @@
       this.kStyle = ((ref7 = this.attributes['k-style']) != null ? ref7.textContent : void 0) || "";
       this.kSearch = (((ref8 = this.attributes['k-search']) != null ? ref8.textContent : void 0) || 'false') === 'true';
       this.inited = false;
-      if (this.kLib === 'jsgrid') {
-        this.kCont = document.createElement('div');
+      if ((ref9 = this.kLib) === 'jsgrid' || ref9 === 'datatables') {
+        this.kCont = document.createElement(this.kLib === 'jsgrid' ? 'div' : 'table');
         cont = document.createElement('div');
         cont.className = this.kClass;
         cont.style.cssText = this.kStyle;
+        if (this.kLib === 'datatables') {
+          this.kCont.style.cssText = "width: 100%;";
+        }
         cont.appendChild(this.kCont);
         this.appendChild(cont);
       }
@@ -832,7 +835,7 @@
     };
 
     _KDBTable.prototype.attachedCallback = function() {
-      var cfg, q, ref, srv;
+      var cfg, q, ref, ref1, srv;
       if (!this.inited) {
         if (this.debug) {
           console.log("kdb-table: initing");
@@ -872,19 +875,20 @@
         if (this.debug) {
           console.log("kdb-table: init complete");
         }
-        if (this.kLib === 'jsgrid' && this.kConfig) {
+        if (((ref1 = this.kLib) === 'jsgrid' || ref1 === 'datatables') && this.kConfig) {
           cfg = getConfig(this.kConfig);
-          if (!(cfg != null ? cfg.pageLoading : void 0)) {
+          if (!((cfg != null ? cfg.pageLoading : void 0) || (cfg != null ? cfg.serverSide : void 0))) {
             return;
           }
           if (this.debug) {
-            console.log("kdb-table: pageLoading is set, forcing the first page");
+            console.log("kdb-table: pageLoading/serverSide is set, forcing the first page");
           }
           return this.query.rerunQuery({
             start: 0,
             size: 1,
             sortBy: "",
-            sortOrder: ""
+            sortOrder: "",
+            data: null
           });
         }
       }
@@ -902,7 +906,7 @@
     };
 
     _KDBTable.prototype.updateTbl = function(r) {
-      var c, d, e, j, len, ref, tbl;
+      var c, d, e, j, len, ref, ref1, tbl;
       if (this.debug) {
         console.log("kdb-table: data");
       }
@@ -912,11 +916,17 @@
       if (this.kLib === 'jsgrid' && ((ref = this.kCfg) != null ? ref.pageLoading : void 0)) {
         return this.updateJSGrid(r);
       }
+      if (this.kLib === 'datatables' && ((ref1 = this.kCfg) != null ? ref1.serverSide : void 0)) {
+        return this.updateDT(r);
+      }
       if ((r.length || 0) === 0) {
         return;
       }
       if (this.kLib === 'jsgrid') {
         return this.updateJSGrid(r);
+      }
+      if (this.kLib === 'datatables') {
+        return this.updateDT(r);
       }
       tbl = "<table class='" + this.kClass + "' style='" + this.kStyle + "'><tr>";
       for (c in r[0]) {
@@ -1011,6 +1021,53 @@
         console.log(cfg);
       }
       return $(this.kCont).jsGrid(cfg);
+    };
+
+    _KDBTable.prototype.updateDT = function(r) {
+      var c, cfg, n, ref, ref1, v;
+      if ((ref = this.kCfg) != null ? ref.serverSide : void 0) {
+        this.kCB(r);
+        return this.kCB = null;
+      }
+      c = [];
+      ref1 = r[0];
+      for (n in ref1) {
+        v = ref1[n];
+        c.push({
+          data: n,
+          title: n
+        });
+      }
+      cfg = {
+        columns: c,
+        searching: this.kSearch,
+        scrollX: true,
+        processing: true
+      };
+      if (this.kConfig) {
+        cfg = mergeCfgs(cfg, getConfig(this.kConfig));
+      }
+      this.kCfg = cfg;
+      if (cfg.paging == null) {
+        cfg.paging = r.length > 100 || (cfg.serverSide || false);
+      }
+      if (cfg.serverSide) {
+        cfg.ajax = (function(_this) {
+          return function(d, cb, set) {
+            _this.kCB = cb;
+            return _this.query.rerunQuery({
+              data: JSON.stringify(d)
+            });
+          };
+        })(this);
+      } else {
+        cfg.data = r;
+      }
+      if (this.debug) {
+        console.log("kdb-table: cfg");
+        console.log(cfg);
+      }
+      return $(this.kCont).DataTable(cfg);
     };
 
     _KDBTable.prototype.loadData = function(f) {

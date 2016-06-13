@@ -42,7 +42,7 @@
 
   <p>Another way to exec the cross domain requests is JSONP - inject a script tag that will download data and execute a callback.
      The server should support JSONP (fix-json will add jsp? handler to .z.ph). Use xhttp if possible as it is much cleaner.</p>
-  <kdb-srv debug="true" k-id="h3" k-srv-type="jsonp" k-srv-uri="localhost:5567" fix-json="true"></kdb-srv>
+  <kdb-srv k-id="h3" k-srv-type="jsonp" k-srv-uri="localhost:5567" fix-json="true"></kdb-srv>
   <kdb-query k-id='q5' k-srv="h3" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
   <kdb-table k-query='q5'></kdb-table>
    

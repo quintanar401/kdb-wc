@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+
+
+
+    <link type="text/css" rel="stylesheet" href="../external/datatables/jquery.dataTables.min.css" />
+    <link type="text/css" rel="stylesheet" href="../external/datatables/buttons.dataTables.min.css" />
+    <link type="text/css" rel="stylesheet" href="../external/datatables/scroller.dataTables.min.css" />
+
+    <script type="text/javascript" src="../external/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="../external/datatables/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="../external/datatables/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="../external/datatables/buttons.colVis.min.js"></script>
+    <script type="text/javascript" src="../external/datatables/dataTables.scroller.min.js"></script>
+       
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>Datatables library can be used for tables.</p>
+  <kdb-srv fix-json="true"></kdb-srv>
+  <kdb-srv k-id="s2" k-srv-type="ws" k-return-type="q"></kdb-srv>
+
+  <p>Visualize a table as is. Sorting is on by default. Paging is on for large tables. Set explicit width because scrollX is on by default. Turn it off otherwise via k-config.</p>
+  <kdb-query k-update-elements="tbl">([] time:.z.T+til[500]*00:00:10; price: 500?40*50?1.0; cancelled:500?0b)</kdb-query>
+  <kdb-table k-id="tbl" k-lib="datatables" k-style="width: 800px;"></kdb-table>
+
+  <p>Use k-search option to add filtering.</p>
+  <kdb-query k-srv="s2" k-update-elements="tbl2 tbl3 tbl5">([] time:.z.P+til[500]*00:00:10; price: 500?40*50?1.0; flag:500?`3)</kdb-query>
+  <kdb-table k-id="tbl2" k-lib="datatables" k-search="true" k-style="width:800px;"></kdb-table>
+
+  <p>Overwrite the default cfg with k-config option (no sort, no paging, set scrollY).</p>
+  <kdb-table k-id="tbl3" k-lib="datatables" k-config='{"ordering": false, "paging":false, "scrollY":400}' k-style="width:800px;"></kdb-table>
+
+  <p>Set serverSide:true option in k-config to turn on loading on demand. k-query must point to a query that can handle this setting. 
+    When $i$ is 0 or $data$ is null (first query) it must return a table with at least 1 row to set the correct fields. If $i$ is not 0 or
+    $data$ is not null it must return a dictionary
+    with keys `data`recordsTotal`recordsFiltered`draw containing the page data, received draw number and the total/filtered count.
+    The input argument is a JSON object that has the following fields: `length - how many records to return (can be -1 if settings are not ok), 
+    `start - start point, `columns - table columns, `order - sorting order, `search - search string, `draw - id number. Basic search is
+    implemented only for flag field (see the example code).
+  </p>
+  <kdb-query k-id="Q" k-srv="s2" k-execute-on="manual" k-escape-q="true">
+   $[$i$;
+     @[{p:.j.k x;l:10|`int$p`length;s:`int$p`start;c:`$(p[`columns]`int$(o:first p`order)`column)`data;d:$["asc"~o`dir;iasc;idesc];
+        if[count v:p[`search;`value];v:`$" "vs v];
+        ix:$[count v;$[count i:where a[`flag]in v;i;::];::];
+        `draw`recordsTotal`recordsFiltered`data!(p`draw;count a;$[(::)~ix;count a;count ix];a l sublist s _ ix d a[c]ix)
+        };"$data$";{`data`error!(();"Exception: ",x)}];
+     [a:([] time:.z.P+til[10000]*00:00:01; price: 10000?40*50?1.0; flag:10000?`2); 1#a]]</kdb-query>
+  <kdb-table k-query="Q" k-id="tbl4" k-lib="datatables" k-config='{"serverSide":true}' k-search="true" k-style="width:800px;"></kdb-table>
+
+  <p>Datatables has several plugins(they have to be downloaded first), for example buttons:</p>
+  <kdb-table k-id="tbl5" k-lib="datatables" k-config='{"buttons":["colvis"], "dom":"Bfrtip"}' k-style="width:800px;"></kdb-table>
+
+  <p>Also scroller plugin can be very useful for extra large tables if you don't want to use the pagination. Search and sort are working smoothly despite the table's size:</p>
+  <kdb-query k-id="Q2" k-srv="s2" k-execute-on="manual" k-escape-q="true">
+   $[$i$;
+     @[{p:.j.k x;l:10|`int$p`length;s:`int$p`start;c:`$(p[`columns]`int$(o:first p`order)`column)`data;d:$["asc"~o`dir;iasc;idesc];
+        if[count v:p[`search;`value];v:`$" "vs v];
+        ix:$[count v;$[count i:where b[`flag]in v;i;::];::];
+        `draw`recordsTotal`recordsFiltered`data!(p`draw;count b;$[(::)~ix;count b;count ix];b l sublist s _ ix d b[c]ix)
+        };"$data$";{`data`error!(();"Exception: ",x)}];
+     [b:([] time:.z.P+til[100000]*00:00:01; price: 100000?40*50?1.0; flag:100000?`2); 1#b]]</kdb-query>
+  <kdb-table k-query="Q2" k-id="tbl6" k-lib="datatables"
+      k-config='{"serverSide":true, "scrollY":400, "deferRender":true, "scroller":true}' k-search="true" k-style="width:800px;"></kdb-table>
+
+</body>
+</html>

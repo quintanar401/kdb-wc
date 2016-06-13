@@ -16,23 +16,23 @@
    uses the binary Q format and c.js lib. </p>
   <p> Also there are three kdb-query objects. The first two concurrently access the first kdb-srv, the second one uses the second kdb-srv object. </p>
 
-  <kdb-srv k-srv-type="ws" debug="true"></kdb-srv>
-  <kdb-srv k-srv-type="ws" k-return-type="q" k-id="cn2" debug="true"></kdb-srv>
+  <kdb-srv k-srv-type="ws"></kdb-srv>
+  <kdb-srv k-srv-type="ws" k-return-type="q" k-id="cn2"></kdb-srv>
 
-  <kdb-query k-id="q1" debug="true">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;/td&gt;l"))</kdb-query>
-  <kdb-query k-id="q2" debug="true">([] a:1 2 3; b:`h`j`k)</kdb-query>
-  <kdb-query k-id="q3" k-srv="cn2" debug="true">([] a:1 2 3; b:`h`j`k; c:("&lt;b&gt;bold&lt;/b&gt;";"&lt;i&gt;ita&lt;/i&gt;";"&lt;span style='color:red;'&gt;RED&lt;/span&gt;"))</kdb-query>
+  <kdb-query k-id="q1">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;/td&gt;l"))</kdb-query>
+  <kdb-query k-id="q2">([] a:1 2 3; b:`h`j`k)</kdb-query>
+  <kdb-query k-id="q3" k-srv="cn2">([] a:1 2 3; b:`h`j`k; c:("&lt;b&gt;bold&lt;/b&gt;";"&lt;i&gt;ita&lt;/i&gt;";"&lt;span style='color:red;'&gt;RED&lt;/span&gt;"))</kdb-query>
 
   <p>Html special chars are sanitized in tables.</p>
 
-  <kdb-table k-query="q1" debug="true"></kdb-table>
+  <kdb-table k-query="q1"></kdb-table>
 
   <p>Though one websocket connection can be shared it can queue incoming queries and return the correct result.</p>
 
-  <kdb-table k-query="q2" debug="true"></kdb-table>
+  <kdb-table k-query="q2"></kdb-table>
 
   <p>It is possible to turn-off the automatic html escaping and use the binary Q protocol to comunicate via a websocket.</p>
 
-  <kdb-table k-query="q3" k-escape-html=false debug="true"></kdb-table>
+  <kdb-table k-query="q3" k-escape-html="false"></kdb-table>
 </body>
 </html>

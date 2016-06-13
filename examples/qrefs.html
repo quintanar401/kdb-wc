@@ -12,7 +12,7 @@
 </head>
 <body>
   <p>Query resolves $id$ references to other elements and inserts values into the query. These elements can be</p>
-  <kdb-srv k-srv-type="http" fix-json=true debug="true"></kdb-srv>
+  <kdb-srv k-srv-type="http" fix-json="true"></kdb-srv>
 
   <p>Selects</p>
   <select k-id='s'><option value='1'>sym1</option><option value='1'>sym2</option><option value='1'>sym3</option></select>
@@ -44,7 +44,7 @@
   <p>Buttons can be linked to a query to cause rerun on a click</p>
   <button onclick="document.getElementById('q').rerunQuery()">Refresh</button> Click it to resend the query
 
-  <kdb-query id="q" k-id="q1" k-update-elements="pre" debug="true">.Q.s `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
+  <kdb-query id="q" k-id="q1" k-update-elements="pre">.Q.s `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
 
   <p>Returned result: </p>
   <pre k-id="pre"></pre>

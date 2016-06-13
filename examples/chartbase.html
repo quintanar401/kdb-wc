@@ -44,7 +44,7 @@
 
   <p>User config can be merged into the calculated cfg: config can be defined by a link to the config object. Useful when the config is shared, too complicated or contains functions.</p>
   <script>KDB.jscfg = { data: { type: 'spline'}, point: { show: true }, axis: { x: { tick: { rotate:45 } } } }</script>
-  <kdb-chart k-style='width:800px;height:400px;' k-id="c6" k-time-col="time" k-data-cols="ask bid" debug="true"
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c6" k-time-col="time" k-data-cols="ask bid"
     k-chart-type="merge-config" k-config='KDB.jscfg'></kdb-chart>
 
 </body>

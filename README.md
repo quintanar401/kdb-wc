@@ -31,8 +31,9 @@ Some other libraries may be needed (all with open source licenses like MIT):
 * [`c3`](http://c3js.org) - charts library C3.
 * [`d3`](https://d3js.org/) - charts library D3 (C3 is based on it).
 * [`dygraph`](http://dygraphs.com) - another charts library for timeseries.
+* [`datatables`](https://datatables.net/) - datatables library.
 * [`jsgrid`](http://js-grid.com/) - grid library.
-* [`jquery`](http://jquery.com) - jquery (required by jsgrid).
+* [`jquery`](http://jquery.com) - jquery (required by jsgrid and datatables).
 * [`ace`](https://github.com/ajaxorg/ace-builds/) - ace editor.
 
 All libraries can be found in `external` directory.
@@ -106,20 +107,20 @@ You can provide parameters to the query by using $paramKID$ format. All such ent
 
 There are also special parameters: use $i$ to refer to the number of executions (can be useful with `k-interval`), $src$ refers to the initiator of the update or `self`, $txt$ refers to the
 data obtained from the initiator of the event (`load`, `timer` if src is self), $id$ refers to the k-id of the initiator, $pres$ - previous result. It is also possible to add `k-attr` attribute
-to the event source, these attributes will be added to the query parameters (see params example).
+to the event source, attributes set in `k-attr` will be added to the query parameters (see params example).
 
 `kdb-query` can update other elements with its result. The result should have the correct format - string for text elements or `kdb-editor`, list of objects (table) for `kdb-table` and `kdb-chart`,
  string array for `select` or `datalist`. It can also update any element that has `kdbUpd` function. There are 3 way the update may be done:
  * consumer can subscribe to the query via `onresult` function.
  * consumer `k-id` or var name can be added to `k-update-elements`.
- * consumer `k-ids` or var name can be set as keys of the result dictionary when `k-dispatch-update` is true. In this case the general result will be taken from key \`.
+ * consumer `k-ids` or var names can be set as keys of the result dictionary when `k-dispatch-update` is true. In this case the general result will be taken from key \`.
 
 Supported attributes:
 * `k-query` - optional, a query can be set either in this attribute or between the tags like in the example above.
 * `k-srv` - optional, link to a `kdb-srv`. If it is not set the first available `kdb-srv` component will be used.
 * `k-execute-on` - optional, list of events that cause the query to execute. Contains only `load` by default. `load` - when the document is loaded, `manual` - do not execute, `timer` - use timer, `k-id` of a button or some other html element - execute on click (buttons and unknown elements) or change event (inputs, select and etc), k-id of `kdb-editor` - execute on its exec event, k-id of another query - execute after it (its result is available via $txt$).
 * `k-update-elements` - optional, users can either subscribe to `kdb-query` events or can provide their `k-id` or var names in this attribute, in this way you can update arbitrary html elements.
-* `k-dispatch-update` - optional, if true the result must be a list with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
+* `k-dispatch-update` - optional, if true the result must be a dictionary with keys corresponding to k-ids or var names. `kdb-query` will then distribute the result. Use key \` for `k-update-elements`.
 * `k-status-var` - optional, report the current number of running queries into this JS variable.
 * `k-on-error` - optional, like `k-update-elements` but if any srv error occurs it will be sent to these object(s).
 * `k-delay` - optional, in millis. With `timer` sets the delay for the first execution.
@@ -145,7 +146,10 @@ Api:
 
 `kdb-table` can be used to show a table. `kdb-table` relies on `kdb-query` to run the actual query. `kdb-query` can be set either with its `k-id` or created implicitly via `k-query` attribute or the content of the tag.
 
-`kdb-table` can use jsGrid library to show tables. Set `k-lib` to `jsgrid`. You can also provide additional configuration to it via `k-config`
+`kdb-table` can use Datatables library to show tables. Set `k-lib` to `datatables`. You can also provide additional configuration to it via `k-config`. You may have to download
+additional themes and plugins for this library because only the basic files are provided in external/datatables directory.
+
+`kdb-table` can use jsGrid library to show tables. Set `k-lib` to `jsgrid`. You can also provide additional configuration to it via `k-config`.
 
 Example
 ```
@@ -153,6 +157,9 @@ Example
 <kdb-table>([] sym: 50?(5?`5);time:.z.T+til[50]*00:00:10; price: 50?40*50?1.0)</kdb-table>
 # update tbl from a query
 <kdb-table k-id="tbl"></kdb-table>
+
+# datatables
+<kdb-table k-id="tbl3" k-lib="datatables" k-config='{"ordering": false, "paging":false, "scrollY":400}' k-style="width:800px;"></kdb-table>
 
 # jsGrid
 <kdb-table k-id="tbl" k-lib="jsgrid" k-style="width:800px; height: 400px;"></kdb-table>
@@ -166,10 +173,10 @@ Supported attributes:
 * `k-srv` - optional, will be passed to `kdb-query` if it needs to be created.
 * `k-query` - optional, `k-id` link to `kdb-query` or query text itself. If it is not present the content is used as in the example above.
 * `k-id` - optional, this id can be used to link other components to this one.
-* `k-escape-html` - escape or not HTML symbols in the result.
-* `k-lib` - can be set to `jsgrid` for more fancy tables.
-* `k-search` - show search boxes in `jsgrid` tables.
-* `k-config` - change the default `jsgrid` config via this attribute. It should be either a JSON string or a variable name with the config.
+* `k-escape-html` - escape or not HTML symbols in the result (valid only for raw tables).
+* `k-lib` - can be set to `datatables` or `jsgrid` for more fancy tables.
+* `k-search` - show search boxes in `datatables` and `jsgrid` tables.
+* `k-config` - change the default `datatables` or `jsgrid` config via this attribute. It should be either a JSON string or a variable name with the config.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
 ## kdb-chart
@@ -209,7 +216,7 @@ Supported attributes:
 * `k-query` - optional, `k-id` link to `kdb-query` or query text itself. If it is not present the content of the tag is used.
 * `k-class` - optional, classes to pass to the wrapper.
 * `k-style` - optional, style to set to the wrapper.
-* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc. `use-config` can be used to use the `k-config`, `merge-config` - merge the default config with `k-config`. In the previous two cases set the chart type manually in `k-config`. For dygraph set it to either 'dygraph', 'dygraph-merge-config' or 'dygraph-use-config'.
+* `k-chart-type` - optional, chart type as in C3 manual. 'line', 'spline' and etc. `use-config` means use `k-config`, `merge-config` - merge the default config with `k-config`. In the previous two cases set the chart type manually in `k-config`. For dygraph set it to either 'dygraph', 'dygraph-merge-config' or 'dygraph-use-config'.
 * `k-time-col` - optional, time column.
 * `k-data-cols` - optional, data columns.
 * `k-config` - optional, either a chart config in JSON format or js name of a variable with the binary config.

@@ -18,31 +18,31 @@
 </head>
 <body>
   <p>General charts. All examples are taken from C3 library.</p>
-  <kdb-srv k-srv-type="ws" k-return-type="q" debug="true"></kdb-srv>
+  <kdb-srv k-srv-type="ws" k-return-type="q"></kdb-srv>
   <kdb-srv k-id='s2' fix-json="true"></kdb-srv>
 
   <p>Data is sent via binary ws in C3 format. Lines example.</p>
-  <kdb-query k-update-elements='c1' debug="true">enlist[`data]!enlist enlist[`columns]!enlist (("data1";30;200;100;400;150;250);("data2";50;20;10;40;15;25))</kdb-query>
+  <kdb-query k-update-elements='c1'>enlist[`data]!enlist enlist[`columns]!enlist (("data1";30;200;100;400;150;250);("data2";50;20;10;40;15;25))</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c1"></kdb-chart>
 
   <p>Data is sent via binary ws in C3 format. Timeseries example.</p>
-  <kdb-query k-update-elements='c2' debug="true"> `data`axis!(`x`columns!(`x;((`x,2013.01.01+til 6);(`data1,30 200 100 400 150 250);
+  <kdb-query k-update-elements='c2'> `data`axis!(`x`columns!(`x;((`x,2013.01.01+til 6);(`data1,30 200 100 400 150 250);
       (`data2,130 340 200 500 250 350)));enlist[`x]!enlist `type`tick!(`timeseries;enlist[`format]!enlist "%Y-%m-%d"))</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c2"></kdb-chart>
 
   <p>Data is sent via http in C3 format. Area chart.</p>
-  <kdb-query k-srv="s2" k-update-elements='c3' debug="true">enlist[`data]!enlist `columns`types!(((`data1,300, 350, 300, 0, 0, 0);
+  <kdb-query k-srv="s2" k-update-elements='c3'>enlist[`data]!enlist `columns`types!(((`data1,300, 350, 300, 0, 0, 0);
     (`data2,130, 100, 140, 200, 150, 50));`data1`data2!(`area;"area-spline"))</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c3"></kdb-chart>
 
   <p>Data is sent via http in C3 format. Stacked bar example.</p>
-  <kdb-query k-srv="s2" k-update-elements='c4' debug="true"> `data`grid!(`columns`type`groups!((`data1, -30, 200, 200, 400, -150, 250;
+  <kdb-query k-srv="s2" k-update-elements='c4'> `data`grid!(`columns`type`groups!((`data1, -30, 200, 200, 400, -150, 250;
    `data2, 130, 100, -100, 200, -150, 50;`data3, -230, 200, 200, -300, 250, 250);`bar;enlist `data1`data2);
     enlist[`y]!enlist enlist[`lines]!enlist enlist enlist[`value]!enlist 0)</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c4"></kdb-chart>
 
   <p>Data is sent via http in C3 format. Scatter chart.</p>
-  <kdb-query k-srv="s2" k-update-elements='c5' debug="true"> `data`axis!(`xs`columns`type!(`setosa`versicolor!`setosa_x`versicolor_x;
+  <kdb-query k-srv="s2" k-update-elements='c5'> `data`axis!(`xs`columns`type!(`setosa`versicolor!`setosa_x`versicolor_x;
    (`setosa_x, 3.5, 3.0, 3.2, 3.1, 3.6, 3.9, 3.4, 3.4, 2.9, 3.1, 3.7, 3.4, 3.0, 3.0, 4.0, 4.4, 3.9, 3.5, 3.8, 3.8, 3.4, 3.7, 3.6, 3.3, 3.4, 3.0, 3.4, 3.5, 3.4, 3.2, 3.1, 3.4, 4.1, 4.2, 3.1, 3.2, 3.5, 3.6, 3.0, 3.4, 3.5, 2.3, 3.2, 3.5, 3.8, 3.0, 3.8, 3.2, 3.7, 3.3;
     `versicolor_x, 3.2, 3.2, 3.1, 2.3, 2.8, 2.8, 3.3, 2.4, 2.9, 2.7, 2.0, 3.0, 2.2, 2.9, 2.9, 3.1, 3.0, 2.7, 2.2, 2.5, 3.2, 2.8, 2.5, 2.8, 2.9, 3.0, 2.8, 3.0, 2.9, 2.6, 2.4, 2.4, 2.7, 2.7, 3.0, 3.4, 3.1, 2.3, 3.0, 2.5, 2.6, 3.0, 2.6, 2.3, 2.7, 3.0, 2.9, 2.9, 2.5, 2.8;
     `setosa, 0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1, 0.2, 0.2, 0.1, 0.1, 0.2, 0.4, 0.4, 0.3, 0.3, 0.3, 0.2, 0.4, 0.2, 0.5, 0.2, 0.2, 0.4, 0.2, 0.2, 0.2, 0.2, 0.4, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.2, 0.2, 0.3, 0.3, 0.2, 0.6, 0.4, 0.3, 0.2, 0.2, 0.2, 0.2;
@@ -51,7 +51,7 @@
   <kdb-chart k-style='width:800px;height:400px;' k-id="c5"></kdb-chart>
 
   <p>Data is sent via binary ws in C3 format. Donut example.</p>
-  <kdb-query k-update-elements='c6' debug="true">`data`donut!(`columns`type!((`data1,30;`data2,120);`donut);enlist[`title]!enlist "Iris Petal Width")</kdb-query>
+  <kdb-query k-update-elements='c6'>`data`donut!(`columns`type!((`data1,30;`data2,120);`donut);enlist[`title]!enlist "Iris Petal Width")</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c6"></kdb-chart>
 
 </body>
