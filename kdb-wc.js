@@ -126,25 +126,26 @@
     }
 
     _KDBSrv.prototype.createdCallback = function() {
-      var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
+      var ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srvType = ((ref = this.attributes['k-srv-type']) != null ? ref.textContent : void 0) || "http";
       this.target = ((ref1 = this.attributes['k-target']) != null ? ref1.textContent : void 0) || null;
-      this.wsSrv = this.srvType === 'http' ? location.host : ((ref2 = this.attributes['k-srv-uri']) != null ? ref2.textContent : void 0) || location.host;
-      this.srvUser = ((ref3 = this.attributes['k-srv-user']) != null ? ref3.textContent : void 0) || null;
-      this.srvPass = ((ref4 = this.attributes['k-srv-pass']) != null ? ref4.textContent : void 0) || null;
-      this.qPrefix = ((ref5 = this.attributes['k-prefix']) != null ? ref5.textContent : void 0) || "";
-      this.debug = ((ref6 = this.attributes['debug']) != null ? ref6.textContent : void 0) || null;
-      this.rType = ((ref7 = this.attributes['k-return-type']) != null ? ref7.textContent : void 0) || "json";
-      this.fixJson = ((ref8 = this.attributes['fix-json']) != null ? ref8.textContent : void 0) || null;
-      this.kFeed = (((ref9 = this.attributes['k-feed']) != null ? ref9.textContent : void 0) || "false") === "true";
+      this.wsSrv = (ref2 = this.srvType) === 'http' || ref2 === 'https' ? location.host : ((ref3 = this.attributes['k-srv-uri']) != null ? ref3.textContent : void 0) || location.host;
+      this.srvUser = ((ref4 = this.attributes['k-srv-user']) != null ? ref4.textContent : void 0) || null;
+      this.srvPass = ((ref5 = this.attributes['k-srv-pass']) != null ? ref5.textContent : void 0) || null;
+      this.qPrefix = ((ref6 = this.attributes['k-prefix']) != null ? ref6.textContent : void 0) || "";
+      this.debug = ((ref7 = this.attributes['debug']) != null ? ref7.textContent : void 0) || null;
+      this.rType = ((ref8 = this.attributes['k-return-type']) != null ? ref8.textContent : void 0) || "json";
+      this.fixJson = ((ref9 = this.attributes['fix-json']) != null ? ref9.textContent : void 0) || null;
+      this.kFeed = (((ref10 = this.attributes['k-feed']) != null ? ref10.textContent : void 0) || "false") === "true";
       this.hidden = true;
       this.ws = this.wsReq = null;
       this.wsQueue = [];
       if (this.srvType === 'jsonp') {
         this.rType = 'json';
       }
+      this.srvProto = /^http.?\:/.test(this.wsSrv) ? '' : this.srvType === 'https' ? 'https://' : 'http://';
       if (this.debug) {
-        console.log("kdb-srv inited: srvType:" + this.srvType + ", target:" + this.target + ", prefix:" + this.qPrefix + ", rType:" + this.rType);
+        console.log("kdb-srv inited: srvType:" + this.srvType + ", target:" + this.target + ", prefix:" + this.qPrefix + ", rType:" + this.rType + ", proto:" + this.srvProto + ", srv: " + this.wsSrv);
       }
       if (this.target) {
         return this.target = (document.querySelector("[k-id='" + this.target + "']")) || this.target;
@@ -152,16 +153,19 @@
     };
 
     _KDBSrv.prototype.runQuery = function(q, cb) {
-      var ref;
+      var ref, ref1;
       if (!cb) {
         cb = function(r, e) {
           return null;
         };
       }
-      if ((ref = this.srvType) === 'http' || ref === 'xhttp' || ref === 'jsonp') {
+      if ((ref = this.srvType) === 'http' || ref === 'xhttp' || ref === 'jsonp' || ref === 'https') {
         return this.sendHTTP(q, cb);
       }
-      return this.sendWS(q, cb);
+      if ((ref1 = this.srvType) === 'ws' || ref1 === 'wss') {
+        return this.sendWS(q, cb);
+      }
+      return console.error('kdb-srv: unknown srv type: ' + this.srvType);
     };
 
     _KDBSrv.prototype.sendWS = function(qq, clb) {
@@ -170,7 +174,7 @@
         cb: clb
       });
       if (!this.ws) {
-        this.ws = new WebSocket("ws://" + this.wsSrv + "/");
+        this.ws = new WebSocket(this.srvType + "://" + this.wsSrv + "/");
         this.ws.binaryType = 'arraybuffer';
         this.ws.onopen = (function(_this) {
           return function() {
@@ -301,7 +305,7 @@
       if (this.target && (trg = extractInfo(this.target))) {
         q = q + "&target=" + trg;
       }
-      q = 'http://' + this.wsSrv + '/' + q;
+      q = this.srvProto + this.wsSrv + '/' + q;
       if (this.debug) {
         console.log("kdb-srv sending request:" + q);
       }

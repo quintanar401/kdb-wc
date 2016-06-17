@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+    <script type="text/javascript" src="../external/c.js"></script>
+
+</head>
+<body>
+  <p>Secure Websockets example</p>
+
+  <kdb-srv k-srv-type="wss"></kdb-srv>
+  <kdb-srv k-srv-type="wss" k-return-type="q" k-id="cn2"></kdb-srv>
+
+  <kdb-query k-id="q1">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;/td&gt;l"))</kdb-query>
+  <kdb-query k-id="q3" k-srv="cn2">([] a:1 2 3; b:`h`j`k; c:("&lt;b&gt;bold&lt;/b&gt;";"&lt;i&gt;ita&lt;/i&gt;";"&lt;span style='color:red;'&gt;RED&lt;/span&gt;"))</kdb-query>
+
+  <p>String format</p>
+
+  <kdb-table k-query="q1"></kdb-table>
+
+  <p>Or native Q format</p>
+
+  <kdb-table k-query="q3" k-escape-html="false"></kdb-table>
+</body>
+</html>

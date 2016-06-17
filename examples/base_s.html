@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+ 
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+
+</head>
+<body>
+  <p>The most basic example via HTTPS. Just three small tags allow you to execute a query on a kdb server.</p>
+  <kdb-srv fix-json="true" k-srv-type="https"></kdb-srv>
+  <kdb-table>([] sym: 50?(5?`5);time:.z.T+til[50]*00:00:10; price: 50?40*50?1.0)</kdb-table>
+
+</body>
+</html>

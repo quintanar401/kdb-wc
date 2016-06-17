@@ -1,3 +1,6 @@
+## 0.12.0
+* Add https/wss support
+
 ## 0.11.0
 * Add Datatables library
 

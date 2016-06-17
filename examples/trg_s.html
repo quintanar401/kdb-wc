@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>KDB Demo</title>
+
+    <script type="text/javascript" src="../external/document-register-element.js"></script>
+ 
+    <script type="text/javascript" src="../kdb-wc.js"></script>
+
+</head>
+<body>
+  <p>Start another srv.q -E 1 on port 5567 for this example. Note that if your certificate is not trusted you may have to
+      connect to this server via https and confirm the security exception.</p>
+
+  <p>You can exec cross domain https requests using Ajax via k-srv-type='xhttp' under certain conditions (special response header is needed).
+   Use k-srv-uri for srv https://name:port. If fix-json is on kdb-srv will automatically patch the default .h funcs to include this header.</p>
+  <kdb-srv k-id="h2" k-srv-type="xhttp" k-srv-uri="https://localhost:5567" fix-json="true"></kdb-srv>
+  <kdb-query k-id='q4' k-srv="h2" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q4'></kdb-table>
+
+  <p>Another way to exec the cross domain requests is JSONP - inject a script tag that will download data and execute a callback.
+     The server should support JSONP (fix-json will add jsp? handler to .z.ph). Use xhttp if possible as it is much cleaner. You may use https:// prefix.</p>
+  <kdb-srv k-id="h3" k-srv-type="jsonp" k-srv-uri="https://localhost:5567" fix-json="true"></kdb-srv>
+  <kdb-query k-id='q5' k-srv="h3" k-execute-on='load b'>([] src:system "p"; sym: 5?(5?`5);time:.z.T+til[5]*00:00:10; price: 5?40*20?1.0)</kdb-query>
+  <kdb-table k-query='q5'></kdb-table>
+   
+</body>
+</html>

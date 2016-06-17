@@ -72,7 +72,7 @@ class _KDBSrv extends HTMLElement
   createdCallback: ->
     @srvType = @attributes['k-srv-type']?.textContent || "http"
     @target = @attributes['k-target']?.textContent || null
-    @wsSrv = if @srvType is 'http' then location.host else (@attributes['k-srv-uri']?.textContent || location.host)
+    @wsSrv = if @srvType in ['http','https'] then location.host else (@attributes['k-srv-uri']?.textContent || location.host)
     @srvUser = @attributes['k-srv-user']?.textContent || null
     @srvPass = @attributes['k-srv-pass']?.textContent || null
     @qPrefix = @attributes['k-prefix']?.textContent || ""
@@ -84,17 +84,19 @@ class _KDBSrv extends HTMLElement
     @ws = @wsReq = null
     @wsQueue = []
     @rType = 'json' if @srvType is 'jsonp'
-    console.log "kdb-srv inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}" if @debug
+    @srvProto = if /^http.?\:/.test @wsSrv then '' else if @srvType is 'https' then 'https://' else 'http://'
+    console.log "kdb-srv inited: srvType:#{@srvType}, target:#{@target}, prefix:#{@qPrefix}, rType:#{@rType}, proto:#{@srvProto}, srv: #{@wsSrv}" if @debug
     if @target
       @target = (document.querySelector "[k-id='#{@target}']") || @target
   runQuery: (q,cb) ->
     (cb = (r,e) -> null) unless cb
-    return @sendHTTP q,cb if @srvType in ['http','xhttp','jsonp']
-    @sendWS q,cb
+    return @sendHTTP q,cb if @srvType in ['http','xhttp','jsonp','https']
+    return @sendWS q,cb if @srvType in ['ws','wss']
+    console.error 'kdb-srv: unknown srv type: '+@srvType
   sendWS: (qq,clb) ->
     @wsQueue.push q:qq, cb:clb
     if !@ws
-      @ws = new WebSocket("ws://#{@wsSrv}/")
+      @ws = new WebSocket("#{@srvType}://#{@wsSrv}/")
       @ws.binaryType = 'arraybuffer'
       @ws.onopen = =>
         console.log "kdb-srv-ws: opened" if @debug
@@ -155,7 +157,7 @@ class _KDBSrv extends HTMLElement
     else
       q = @qPrefix + encodeURIComponent q
     q = q + "&target=" + trg if @target and trg=extractInfo @target
-    q = 'http://' + @wsSrv + '/' + q
+    q = @srvProto + @wsSrv + '/' + q
     console.log "kdb-srv sending request:"+q if @debug
     return @sendJSONP rid, q, cb if @srvType is 'jsonp'
     xhr = new XMLHttpRequest()

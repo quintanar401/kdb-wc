@@ -12,7 +12,9 @@ without any settings to an html page (and kdb-wc.js script) and data will be loa
 
 This library is based on the new HTML5 feature - web components - entities that look like the ordinary html tags but can encapsulate arbitrary logic and perform complex tasks behind the scene. Currently not all browsers support them or enable this functionality by default thus you may need to include `document-register-element.js` library (can be found in external directory) that provides the same functionality (it is used in all examples).
 
-This library is not intended for the production, it lacks any security, robustness and etc. It is intended for presentations, prototyping, visualizing datasets.
+This library is intended for presentations, prototyping, visualizing datasets.
+
+The library supports the latest 3.4 SSL feature. You can connect either via https or wss.
 
 To use this library include `kdb-wc.js` into your html page:
 ```
@@ -42,22 +44,24 @@ All libraries can be found in `external` directory.
 
 ## kdb-srv
 
-The core of the library is `kdb-srv` component. It allows users to execute arbitrary queries either via an Ajax http request or via a websocket. It supports string
-and binary protocols for websockets and json, xml and sting data formats.
+The core of the library is `kdb-srv` component. It allows users to execute arbitrary queries either via an Ajax http(s) request or via a websocket/secure websocket. It supports string
+and binary protocols for websockets and json, xml and string data formats.
 
-`kdb-srv` can be used with the default .z.ph handler. You may need to add `fix-json` attribute if your .z.ph fails to process queries like 'json? query' or if you want
+`kdb-srv` can be used with the default .z.ph handler(and/or -E flag). You may need to add `fix-json` attribute if your .z.ph fails to process queries like 'json? query' or if you want
 to use cross domain (CORS) requests.
 
 Websockets allow you to connect to any server not just the default one. You can even load your page as 'file://' and still be able to use them. You should though set
 the correct ws handler on the target server because the default .z.ws does nothing - use `srv.q` as an example.
 
-Some exotic http request methods are supported including cross origin requests (xhttp) and JSONP.
+Some exotic http(s) request methods are supported including cross origin requests (xhttp) and JSONP.
 
 xhttp requests require the server side support - you need to set `Access-Control-Allow-Origin` header. .h namespace can be automatically patched via `fix-json` attribute.
 
 JSONP requests also require the server side support (they are not restricted like xhttp requests but the server need to be aware of them). Your server (and your optional query prefix)
 must accept (\`id;query) string as an argument and return `KDB.processJSONP("id",jsObject)` string as the response. `fix-json` will inject the default implementation into
 .h namespace (jsp? prefix - it is also the default prefix in this case).
+
+For secure connection using xhttp or jsonp provide the server name with the protocol prefix: `https://srv.com`
 
 Example:
 ```
@@ -69,11 +73,11 @@ Example:
 
 Supported attributes:
 * `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml`, `txt`.
-* `k-srv-type` - optional, ws, jsonp, xhttp or http (default). xhttp and jsonp mean cross origin requests and require `k-srv-uri` + server side support. ws - websockets.
+* `k-srv-type` - optional, ws, wss, jsonp, xhttp, https or http (default). xhttp and jsonp mean cross origin requests and require `k-srv-uri` + server side support. ws(s) - websockets.
 * `k-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
-* `k-srv-uri` - optional, target websocket or xhttp server. Format: "host:port". By default it is the current web server.
-* `k-srv-user` - optional, a user for http requests.
-* `k-srv-pass` - optional, a password for http requests.
+* `k-srv-uri` - optional, target websocket or xhttp server. Format: "host:port". By default it is the current web server. If you use xhttp or jsonp you may add an optional protocol prefix: "https://host:port"
+* `k-srv-user` - optional, a user for http(s) requests.
+* `k-srv-pass` - optional, a password for http(s) requests.
 * `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server. When the name is '' this option is ignored.
 * `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json?enlist ` or `jsn?enlist ` or `jsp?` if it is not provided and the result type is `json`.
 * `k-id` - optional, this id can be used to link other components to this one.
@@ -323,6 +327,6 @@ Examples can be used to quickly overview all available functionality. Simply sta
 ```
 q srv.q
 ```
-And enter `localhost:5566/index.html` in your browser.
+And enter `localhost:5566/index.html` in your browser. For secure examples start q 3.4 with -E 1 or -E 2 option and enter `https://localhost:5566/index.html`.
 
 If you start srv.q from another directory redefine '.h.HOME' to point to srv.q directory otherwise it will not be able to find examples and etc.
