@@ -1,3 +1,6 @@
+## 0.12.1
+* Add .z.wc to srv.q
+
 ## 0.12.0
 * Add https/wss support
 

@@ -36,7 +36,8 @@ openTrg:{cMap[@[{hopen (x;10000)};x;{'"hopen for ",string[x]," failed with ",y}[
 
 subs:{[f] cSubs[.z.w]:(wsType;$[10=type f;value f;f]); execSub[0b;.z.w;cSubs .z.w]};
 
-.z.pc:{cMap[x]:`; cSubs[x]:(::)};
+.z.wc:.z.pc:{cMap[x]:`; cSubs[x]:(::)};
+
 
 .z.ts:{[] execSub[1b]'[key cSubs;value cSubs]}
 execSub:{if[not (::)~z; r:$[100=type f:z 1;f[];f]; : $[x;neg[y] $[z 0;.j.j;-8!] r;r]]}
