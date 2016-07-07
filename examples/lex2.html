@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>KDB Demo</title>
 
+    <link href="../external/c3.min.css" rel="stylesheet" type="text/css">
+
     <script type="text/javascript" src="../external/document-register-element.js"></script>
+    <script src="../external/d3.min.js" charset="utf-8"></script>
+    <script src="../external/c3.min.js"></script>
     <script type="text/javascript" src="../kdb-wc.js"></script>
     <script type="text/javascript" src="../kdb-lex.js"></script>
     <script type="text/javascript" src="../external/c.js"></script>
@@ -26,16 +30,18 @@
 
 </head>
 <body>
-  <p>Simple Q console. Click on the values in the result to execute them - kdb-query can attach a click event to any element. KDBLexer is used to color the q  code.</p>
-  <p>See also <a href="lex2.html">console</a> where tables can be displayed as kdb-charts.</p>
+  <p>Advanced Q console. Tables and dicts will be added as kdb-charts (tables - time and 1 data col, dicts - names and values for the pie chart).</p>
   <kdb-srv k-srv-type="ws" k-return-type="q"></kdb-srv>
 
   <textarea placeholder="Enter your queries here" k-id="t" rows="10" cols="80"></textarea>
-  <button k-id='btn'>Send</button>
-  <kdb-query k-update-elements='cons' k-filter="KDB.KDBLexer" k-escape-q="yes" k-execute-on='manual btn'>"q)$t$","\n",(.Q.s @[value;"$t$";::])</kdb-query>
-  <kdb-query k-update-elements='cons' k-filter="KDB.KDBLexer" k-escape-q="yes" k-execute-on='cons'>"q)$txt$","\n",(.Q.s @[value;"$txt$";::])</kdb-query>
+  <button k-id='btn'>Send</button>  <button k-id='btn' onclick="document.getElementById('cons').innerHTML=''">Clear</button>
+  <kdb-query k-update-elements="cons" k-dispatch-update="true" k-filter="KDB.KDBLexer2" k-escape-q="yes" k-execute-on='manual btn'>
+      { r:@[value;x;::];
+        : $[type[r] in 98 99h;(`cons,`$id)!("&lt;kdb-chart k-id='",(id:"c",string`long$.z.T),"' k-style='width:800px;height:400px;'&gt;&lt;/kdb-chart&gt;";r);enlist[`]!enlist"q)$t$","\n",(.Q.s r)];
+       } "$t$"
+  </kdb-query>
 
-  <div style="line-height:normal;text-autospace:none;font-size: 8pt; font-family: Consolas; white-space: nowrap;"
+  <div id="cons" style="line-height:normal;text-autospace:none;font-size: 8pt; font-family: Consolas; white-space: nowrap;"
      k-id='cons' k-append='top' k-content-type='html'></div>
 </body>
 </html>

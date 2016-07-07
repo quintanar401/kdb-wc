@@ -302,6 +302,8 @@ Converts Q text into an array of tokens. It also can produce html from the text.
 
 KDBLex instance is available as KDB.KDBLexer. It can be used with `kdb-query` in `k-filter` attribute to colorify q text.
 
+KDB.KDBLexer2 can be used with dictionaries - it will update the default \` field.
+
 ```
 l = new KDB.KDBLex() || KDB.KDBLexer
 l.getHtml("a: 100")
@@ -330,3 +332,11 @@ q srv.q
 And enter `localhost:5566/index.html` in your browser. For secure examples start q 3.4 with -E 1 or -E 2 option and enter `https://localhost:5566/index.html`.
 
 If you start srv.q from another directory redefine '.h.HOME' to point to srv.q directory otherwise it will not be able to find examples and etc.
+
+# Screen shots
+
+![C3](https://raw.githubusercontent.com/quintanar401/kdb-wc/master/images/webc_c3.png)
+![Dygraph](https://raw.githubusercontent.com/quintanar401/kdb-wc/master/images/webc_dygraph.png)
+![Datatables](https://raw.githubusercontent.com/quintanar401/kdb-wc/master/images/webc_datatables.png)
+![Ace](https://raw.githubusercontent.com/quintanar401/kdb-wc/master/images/webc_ace.png)
+![Colorify](https://raw.githubusercontent.com/quintanar401/kdb-wc/master/images/webc_colorq.png)

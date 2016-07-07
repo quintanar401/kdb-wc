@@ -154,3 +154,9 @@ class KDBLex
 window.KDB ?= {}
 KDB.KDBLexer = new KDBLex()
 KDB.KDBLex = KDBLex
+KDB.KDBLexer2 = (txt) ->
+  if typeof txt is 'string'
+    txt = KDB.KDBLexer.filter txt
+  else if typeof txt is 'object' and txt[""]?
+    txt[""] = KDB.KDBLexer.filter txt[""]
+  txt

@@ -308,9 +308,13 @@ class _KDBQuery extends HTMLElement
   updateObjects: ->
     @updateObj o,true,document.querySelector "[k-id='#{o}']" for o in @updObjs
     if @kDispUpd
+      if typeof @result isnt 'object'
+        console.error "kdb-query: dictionary is expected with dispatch setting"
+        return console.log @result
       @updateObj n,false,document.querySelector "[k-id='#{n}']" for n of @result when n
   updateObj: (n,isUpd,o) ->
     r = if @kDispUpd then @result[if isUpd then "" else n] else @result
+    return if r is undefined
     @updObjWithRes n,o,r
   updObjWithRes: (n,o,r) ->
     if !o
@@ -333,6 +337,8 @@ class _KDBQuery extends HTMLElement
         opt.value = e.toString()
         opt.text = e.toString()
         o.appendChild opt
+    else if o.nodeName in ['KDB-CHART','KDb-TABLE','KDB-EDITOR'] # not inited
+      setTimeout (=> o.kdbUpd r,@kID),0
     else
       a = o.attributes['k-append']?.textContent || 'overwrite'
       ty = o.attributes['k-content-type']?.textContent || 'text'
@@ -340,7 +346,8 @@ class _KDBQuery extends HTMLElement
       if ty is 'text'
         if a is 'top' then o.textContent = r.toString()+s+o.textContent else if a is 'bottom' then o.textContent += s+r.toString() else o.textContent = r.toString()
       else
-        if a is 'top' then o.innerHTML = r.toString()+s+o.innerHTML else if a is 'bottom' then o.innerHTML += s+r.toString() else o.innerHTML = r.toString()
+        return o.innerHTML = r.toString() if a is 'overwrite'
+        if a is 'top' then o.insertAdjacentHTML 'afterBegin', r.toString()+s else o.insertAdjacentHTML 'beforeEnd', s+r.toString()
   resolveRefs: (q,args)->
     console.log args if @debug
     return q unless @kRefs

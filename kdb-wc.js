@@ -682,6 +682,10 @@
         this.updateObj(o, true, document.querySelector("[k-id='" + o + "']"));
       }
       if (this.kDispUpd) {
+        if (typeof this.result !== 'object') {
+          console.error("kdb-query: dictionary is expected with dispatch setting");
+          return console.log(this.result);
+        }
         results = [];
         for (n in this.result) {
           if (n) {
@@ -695,11 +699,14 @@
     _KDBQuery.prototype.updateObj = function(n, isUpd, o) {
       var r;
       r = this.kDispUpd ? this.result[isUpd ? "" : n] : this.result;
+      if (r === void 0) {
+        return;
+      }
       return this.updObjWithRes(n, o, r);
     };
 
     _KDBQuery.prototype.updObjWithRes = function(n, o, r) {
-      var a, e, err, error1, error2, i, j, len, opt, ref, ref1, ref2, results, s, ty;
+      var a, e, err, error1, error2, i, j, len, opt, ref, ref1, ref2, ref3, results, s, ty;
       if (!o) {
         a = new Function("x", n + " = x");
         try {
@@ -728,9 +735,15 @@
           results.push(o.appendChild(opt));
         }
         return results;
+      } else if ((ref1 = o.nodeName) === 'KDB-CHART' || ref1 === 'KDb-TABLE' || ref1 === 'KDB-EDITOR') {
+        return setTimeout(((function(_this) {
+          return function() {
+            return o.kdbUpd(r, _this.kID);
+          };
+        })(this)), 0);
       } else {
-        a = ((ref1 = o.attributes['k-append']) != null ? ref1.textContent : void 0) || 'overwrite';
-        ty = ((ref2 = o.attributes['k-content-type']) != null ? ref2.textContent : void 0) || 'text';
+        a = ((ref2 = o.attributes['k-append']) != null ? ref2.textContent : void 0) || 'overwrite';
+        ty = ((ref3 = o.attributes['k-content-type']) != null ? ref3.textContent : void 0) || 'text';
         s = o.textContent ? '\n' : '';
         if (ty === 'text') {
           if (a === 'top') {
@@ -741,12 +754,13 @@
             return o.textContent = r.toString();
           }
         } else {
-          if (a === 'top') {
-            return o.innerHTML = r.toString() + s + o.innerHTML;
-          } else if (a === 'bottom') {
-            return o.innerHTML += s + r.toString();
-          } else {
+          if (a === 'overwrite') {
             return o.innerHTML = r.toString();
+          }
+          if (a === 'top') {
+            return o.insertAdjacentHTML('afterBegin', r.toString() + s);
+          } else {
+            return o.insertAdjacentHTML('beforeEnd', s + r.toString());
           }
         }
       }
