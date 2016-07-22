@@ -511,7 +511,7 @@ class _KDBTable extends HTMLElement
           r = r and (f[v.name] is undefined or e[v.name] is f[v.name])
       r
   escapeHtml: (s) ->
-    s = s.toString()
+    s = if s then s.toString() else ""
     if @escHtml then s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') else s
 
 class _KDBChart extends HTMLElement

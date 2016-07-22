@@ -1122,7 +1122,7 @@
     };
 
     _KDBTable.prototype.escapeHtml = function(s) {
-      s = s.toString();
+      s = s ? s.toString() : "";
       if (this.escHtml) {
         return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       } else {
