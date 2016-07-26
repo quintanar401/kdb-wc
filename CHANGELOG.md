@@ -1,7 +1,10 @@
+## 0.12.3
+* fix null value issue in tables
+
 ## 0.12.2
 * Add lex2 example - add kdb-charts on the fly.
 * fix innerHTML issue when adding new data.
-* fix errors with updates via kd-query dispatch.
+* fix errors with updates via kdb-query dispatch.
 
 ## 0.12.1
 * Add .z.wc to srv.q
