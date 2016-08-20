@@ -47,5 +47,8 @@
   <kdb-chart k-style='width:800px;height:400px;' k-id="c6" k-time-col="time" k-data-cols="ask bid"
     k-chart-type="merge-config" k-config='KDB.jscfg'></kdb-chart>
 
+  <p>Test C3 cfg vs merge-cfg option</p>
+  <kdb-query k-update-elements='c7'>enlist[`data]!enlist enlist[`columns]!enlist[(`ask,30?1f;`bid,30?1f)]</kdb-query>
+  <kdb-chart k-style='width:800px;height:400px;' k-id="c7" k-time-col="time" k-data-cols="ask bid"  k-chart-type="merge-config" k-config='KDB.jscfg'></kdb-chart>
 </body>
 </html>

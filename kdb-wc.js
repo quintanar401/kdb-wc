@@ -706,7 +706,7 @@
     };
 
     _KDBQuery.prototype.updObjWithRes = function(n, o, r) {
-      var a, e, err, error1, error2, i, j, len, opt, ref, ref1, ref2, ref3, results, s, ty;
+      var a, e, err, error1, error2, i, idx, j, len, opt, prv, ref, ref1, ref2, ref3, ref4, s, ty;
       if (!o) {
         a = new Function("x", n + " = x");
         try {
@@ -725,25 +725,31 @@
           return console.log(err);
         }
       } else if ((ref = o.nodeName) === 'SELECT' || ref === 'DATALIST') {
+        prv = o.nodeName === 'SELECT' && o.selectedIndex >= 0 ? o.options[o.selectedIndex].text : null;
+        idx = -1;
         o.innerHTML = '';
-        results = [];
         for (i = j = 0, len = r.length; j < len; i = ++j) {
           e = r[i];
           opt = document.createElement('option');
           opt.value = e.toString();
           opt.text = e.toString();
-          results.push(o.appendChild(opt));
+          if (prv === opt.text) {
+            idx = i;
+          }
+          o.appendChild(opt);
         }
-        return results;
-      } else if ((ref1 = o.nodeName) === 'KDB-CHART' || ref1 === 'KDb-TABLE' || ref1 === 'KDB-EDITOR') {
+        if (idx >= 0 && ((ref1 = o.attributes['k-preserve']) != null ? ref1.textContent : void 0)) {
+          return o.selectedIndex = idx;
+        }
+      } else if ((ref2 = o.nodeName) === 'KDB-CHART' || ref2 === 'KDB-TABLE' || ref2 === 'KDB-EDITOR') {
         return setTimeout(((function(_this) {
           return function() {
             return o.kdbUpd(r, _this.kID);
           };
         })(this)), 0);
       } else {
-        a = ((ref2 = o.attributes['k-append']) != null ? ref2.textContent : void 0) || 'overwrite';
-        ty = ((ref3 = o.attributes['k-content-type']) != null ? ref3.textContent : void 0) || 'text';
+        a = ((ref3 = o.attributes['k-append']) != null ? ref3.textContent : void 0) || 'overwrite';
+        ty = ((ref4 = o.attributes['k-content-type']) != null ? ref4.textContent : void 0) || 'text';
         s = o.textContent ? '\n' : '';
         if (ty === 'text') {
           if (a === 'top') {
@@ -1411,7 +1417,7 @@
           console.log(r);
         }
         this.chSrc = 'c3';
-        return this.updateChartWithData(r);
+        cfg = r;
       } else if (typeof r === 'object' && r.length > 0) {
         if (this.debug) {
           console.log("Will detect the user format");

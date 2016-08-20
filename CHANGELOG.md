@@ -1,3 +1,7 @@
+## 0.12.4
+* fix merge-cfg with C3
+* add k-preserve to select
+
 ## 0.12.3
 * fix null value issue in tables
 

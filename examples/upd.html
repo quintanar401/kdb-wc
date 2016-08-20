@@ -21,7 +21,7 @@
   <p>kdb-table</p>
   <kdb-table k-id="t1"></kdb-table>
   <p>select</p>
-  <select k-id='s1'></select>
+  <select k-id='s1' k-preserve="1"></select>
   <p>Input with datalist</p>
   <input list="dlist" type="text"></input>
   <datalist id="dlist" k-id="dlist"></datalist>
@@ -49,5 +49,8 @@
     vueData = { content: {} }
     vue1 = new Vue({ el:"#vue", data: vueData})
   </script>
+  <p>Preserve selected value</p>
+  <button k-id="bsel">Update select</button>
+  <kdb-query k-update-elements="s1" k-execute-on="bsel">`b`c`a`d</kdb-query>
 </body>
 </html>

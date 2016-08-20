@@ -331,13 +331,17 @@ class _KDBQuery extends HTMLElement
         console.log "kdb-query:exception in kdbUpd"
         console.log err
     else if o.nodeName in ['SELECT','DATALIST']
+      prv = if o.nodeName is 'SELECT' and o.selectedIndex>=0 then o.options[o.selectedIndex].text else null
+      idx = -1
       o.innerHTML = ''
       for e,i in r
         opt = document.createElement 'option'
         opt.value = e.toString()
         opt.text = e.toString()
+        idx = i if prv is opt.text
         o.appendChild opt
-    else if o.nodeName in ['KDB-CHART','KDb-TABLE','KDB-EDITOR'] # not inited
+      o.selectedIndex = idx if idx>=0 and o.attributes['k-preserve']?.textContent
+    else if o.nodeName in ['KDB-CHART','KDB-TABLE','KDB-EDITOR'] # not inited
       setTimeout (=> o.kdbUpd r,@kID),0
     else
       a = o.attributes['k-append']?.textContent || 'overwrite'
@@ -639,7 +643,7 @@ class _KDBChart extends HTMLElement
       console.log "C3 format detected" if @debug
       console.log r if @debug
       @chSrc = 'c3'
-      return @updateChartWithData r
+      cfg = r
     else if typeof r is 'object' and r.length>0
       # detect format
       console.log "Will detect the user format" if @debug

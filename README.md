@@ -138,6 +138,7 @@ There are attributes that `kdb-query` understands on its target elements:
 * `k-append` - on text elements defines how the new result is added. Possible values: 'top', 'bottom', 'overwrite'.
 * `k-content-type` - text or html, how the result is added to the element: as html or text.
 * `k-id` - this id can be used to link other components to `kdb-query`.
+* `k-preserve` - selects will preserve their values on updates (if the new list contains the previous value).
 
 Api:
 * `onresult(f)` - subscribe to 'newResult' event. If the result is already ready then `f` will be called immediately. `f` should have one parameter - result.
