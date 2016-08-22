@@ -831,7 +831,7 @@
     }
 
     _KDBTable.prototype.createdCallback = function() {
-      var cont, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
+      var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8;
       this.srv = ((ref = this.attributes['k-srv']) != null ? ref.textContent : void 0) || "";
       this.query = ((ref1 = this.attributes['k-query']) != null ? ref1.textContent : void 0) || this.textContent;
       this.kLib = ((ref2 = this.attributes['k-lib']) != null ? ref2.textContent : void 0) || 'table';
@@ -842,7 +842,18 @@
       this.kStyle = ((ref7 = this.attributes['k-style']) != null ? ref7.textContent : void 0) || "";
       this.kSearch = (((ref8 = this.attributes['k-search']) != null ? ref8.textContent : void 0) || 'false') === 'true';
       this.inited = false;
-      if ((ref9 = this.kLib) === 'jsgrid' || ref9 === 'datatables') {
+      this.initContainer();
+      if (this.debug) {
+        return console.log("kdb-table: srv: " + this.srv + ", query: " + this.query + ", lib:" + this.kLib);
+      }
+    };
+
+    _KDBTable.prototype.initContainer = function() {
+      var cont, ref;
+      if ((ref = this.kLib) === 'jsgrid' || ref === 'datatables') {
+        if (this.kCont) {
+          this.innerHTML = "";
+        }
         this.kCont = document.createElement(this.kLib === 'jsgrid' ? 'div' : 'table');
         cont = document.createElement('div');
         cont.className = this.kClass;
@@ -851,10 +862,7 @@
           this.kCont.style.cssText = "width: 100%;";
         }
         cont.appendChild(this.kCont);
-        this.appendChild(cont);
-      }
-      if (this.debug) {
-        return console.log("kdb-table: srv: " + this.srv + ", query: " + this.query + ", lib:" + this.kLib);
+        return this.appendChild(cont);
       }
     };
 
@@ -925,7 +933,8 @@
       return this.updateTbl(ev.detail);
     };
 
-    _KDBTable.prototype.kdbUpd = function(r) {
+    _KDBTable.prototype.kdbUpd = function(r, kID) {
+      this.query = document.querySelector("[k-id='" + kID + "']");
       return this.updateTbl(r);
     };
 
@@ -1049,9 +1058,12 @@
 
     _KDBTable.prototype.updateDT = function(r) {
       var c, cfg, n, ref, ref1, v;
-      if ((ref = this.kCfg) != null ? ref.serverSide : void 0) {
+      if (((ref = this.kCfg) != null ? ref.serverSide : void 0) && this.kCB) {
         this.kCB(r);
         return this.kCB = null;
+      }
+      if (this.kCfg) {
+        this.initContainer();
       }
       c = [];
       ref1 = r[0];

@@ -1,3 +1,6 @@
+## 0.12.5
+* For datatable add ability to be reinitialized and updated on an external event
+
 ## 0.12.4
 * fix merge-cfg with C3
 * add k-preserve to select

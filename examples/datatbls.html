@@ -73,5 +73,19 @@
   <kdb-table k-query="Q2" k-id="tbl6" k-lib="datatables"
       k-config='{"serverSide":true, "scrollY":400, "deferRender":true, "scroller":true}' k-search="true" k-style="width:800px;"></kdb-table>
 
+  <p>Test the prev example when the tbl is updated by an external event and there are multiple updates.</p>
+  <button k-id="dtest">(Re)Send Query</button>
+  <kdb-query debug="true" k-id="Q3" k-srv="s2" k-update-elements="tbl7" k-execute-on="dtest" k-escape-q="true">
+   $[not "data"~d:"$data$";
+     @[{p:.j.k x;l:10|`int$p`length;s:`int$p`start;c:`$(p[`columns]`int$(o:first p`order)`column)`data;d:$["asc"~o`dir;iasc;idesc];
+        if[count v:p[`search;`value];v:`$" "vs v];
+        ix:$[count v;$[count i:where b[`flag]in v;i;::];::];
+        `draw`recordsTotal`recordsFiltered`data!(p`draw;count b;$[(::)~ix;count b;count ix];b l sublist s _ ix d b[c]ix)
+        };d;{`data`error!(();"Exception: ",x)}];
+     [b:([] time:.z.P+til[100000]*00:00:01; price: 100000?40*50?1.0; flag:100000?`2); 1#b]]</kdb-query>
+  <kdb-table k-id="tbl7" k-lib="datatables"
+      k-config='{"serverSide":true, "scrollY":400, "deferRender":true, "scroller":true}' k-search="true" k-style="width:800px;"></kdb-table>
+
+
 </body>
 </html>

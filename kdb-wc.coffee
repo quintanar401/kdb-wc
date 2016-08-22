@@ -383,7 +383,11 @@ class _KDBTable extends HTMLElement
     @kStyle = @attributes['k-style']?.textContent || ""
     @kSearch = (@attributes['k-search']?.textContent || 'false') == 'true'
     @inited = false
+    @initContainer()
+    console.log "kdb-table: srv: #{@srv}, query: #{@query}, lib:#{@kLib}" if @debug
+  initContainer: ->
     if @kLib in ['jsgrid','datatables']
+      this.innerHTML = "" if @kCont
       @kCont = document.createElement if @kLib is 'jsgrid' then 'div' else 'table'
       cont = document.createElement 'div'
       cont.className = @kClass
@@ -391,7 +395,6 @@ class _KDBTable extends HTMLElement
       @kCont.style.cssText = "width: 100%;" if @kLib is 'datatables'
       cont.appendChild @kCont
       this.appendChild cont
-    console.log "kdb-table: srv: #{@srv}, query: #{@query}, lib:#{@kLib}" if @debug
   attachedCallback: ->
     if !@inited
       console.log "kdb-table: initing" if @debug
@@ -418,7 +421,9 @@ class _KDBTable extends HTMLElement
   onResult: (ev) ->
     console.log "kdb-table: got event" if @debug
     @updateTbl ev.detail
-  kdbUpd: (r) -> @updateTbl r
+  kdbUpd: (r,kID) ->
+    @query = document.querySelector "[k-id='#{kID}']"
+    @updateTbl r
   updateTbl: (r) ->
     console.log "kdb-table: data" if @debug
     console.log r if @debug
@@ -473,9 +478,10 @@ class _KDBTable extends HTMLElement
     console.log cfg if @debug
     $(@kCont).jsGrid cfg
   updateDT: (r) ->
-    if @kCfg?.serverSide
+    if @kCfg?.serverSide and @kCB
       @kCB r
       return @kCB = null
+    @initContainer() if @kCfg # reinit the container
     c = []
     for n,v of r[0]
       c.push data: n, title: n
