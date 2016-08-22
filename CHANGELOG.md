@@ -1,5 +1,6 @@
 ## 0.12.5
 * For datatable add ability to be reinitialized and updated on an external event
+* Always remember the last query in kdb-table (needed for lazy loading)
 
 ## 0.12.4
 * fix merge-cfg with C3
