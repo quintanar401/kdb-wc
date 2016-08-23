@@ -34,7 +34,9 @@
     }
     txt = '';
     if (v.nodeName === 'SELECT') {
-      txt = v.options[v.selectedIndex].text;
+      if (v.selectedIndex >= 0) {
+        txt = v.options[v.selectedIndex].text;
+      }
     } else if (v.nodeName === 'INPUT') {
       if (v.type === 'checkbox') {
         txt = v.checked ? '1b' : '0b';
@@ -1058,9 +1060,12 @@
 
     _KDBTable.prototype.updateDT = function(r) {
       var c, cfg, n, ref, ref1, v;
-      if (((ref = this.kCfg) != null ? ref.serverSide : void 0) && this.kCB) {
-        this.kCB(r);
-        return this.kCB = null;
+      if (((ref = this.kCfg) != null ? ref.serverSide : void 0) && this.kCB && (r.draw != null)) {
+        if (r.draw === this.kDraw) {
+          this.kCB(r);
+          this.kCB = null;
+        }
+        return;
       }
       if (this.kCfg) {
         this.initContainer();
@@ -1091,6 +1096,7 @@
         cfg.ajax = (function(_this) {
           return function(d, cb, set) {
             _this.kCB = cb;
+            _this.kDraw = d.draw;
             return _this.query.rerunQuery({
               data: JSON.stringify(d)
             });

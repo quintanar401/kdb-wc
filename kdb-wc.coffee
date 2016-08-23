@@ -17,7 +17,7 @@ extractInfo = (v) ->
   return v if typeof v is 'string'
   txt = ''
   if v.nodeName is 'SELECT'
-    txt = v.options[v.selectedIndex].text
+    txt = v.options[v.selectedIndex].text if v.selectedIndex>=0
   else if v.nodeName is 'INPUT'
     if v.type is 'checkbox'
       txt = if v.checked then '1b' else '0b'
@@ -478,9 +478,11 @@ class _KDBTable extends HTMLElement
     console.log cfg if @debug
     $(@kCont).jsGrid cfg
   updateDT: (r) ->
-    if @kCfg?.serverSide and @kCB
-      @kCB r
-      return @kCB = null
+    if @kCfg?.serverSide and @kCB and r.draw?
+      if r.draw is @kDraw
+        @kCB r
+        @kCB = null
+      return
     @initContainer() if @kCfg # reinit the container
     c = []
     for n,v of r[0]
@@ -496,6 +498,7 @@ class _KDBTable extends HTMLElement
     if cfg.serverSide
       cfg.ajax = (d,cb,set) =>
         @kCB = cb
+        @kDraw = d.draw
         @query.rerunQuery data: JSON.stringify d
     else
       cfg.data = r
