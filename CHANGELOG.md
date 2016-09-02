@@ -1,3 +1,6 @@
+## 0.12.7
+* Another workaround for bad .j.j - add option to tranfer q encoded data via http - k-deserialize
+
 ## 0.12.6
 * Fix empty select param
 * Check for the last id number for datatables update in server mode

@@ -128,7 +128,7 @@
     }
 
     _KDBSrv.prototype.createdCallback = function() {
-      var ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
+      var ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       this.srvType = ((ref = this.attributes['k-srv-type']) != null ? ref.textContent : void 0) || "http";
       this.target = ((ref1 = this.attributes['k-target']) != null ? ref1.textContent : void 0) || null;
       this.wsSrv = (ref2 = this.srvType) === 'http' || ref2 === 'https' ? location.host : ((ref3 = this.attributes['k-srv-uri']) != null ? ref3.textContent : void 0) || location.host;
@@ -139,6 +139,7 @@
       this.rType = ((ref8 = this.attributes['k-return-type']) != null ? ref8.textContent : void 0) || "json";
       this.fixJson = ((ref9 = this.attributes['fix-json']) != null ? ref9.textContent : void 0) || null;
       this.kFeed = (((ref10 = this.attributes['k-feed']) != null ? ref10.textContent : void 0) || "false") === "true";
+      this.kDeser = (((ref11 = this.attributes['k-deserialize']) != null ? ref11.textContent : void 0) || "false") === "true";
       this.hidden = true;
       this.ws = this.wsReq = null;
       this.wsQueue = [];
@@ -343,6 +344,9 @@
           try {
             try {
               res = _this.rType === "json" ? JSON.parse(xhr.responseText) : _this.rType === "xml" ? xhr.responseXML : xhr.responseText;
+              if (_this.kDeser && res instanceof Array && res[0] === 'deserialize') {
+                res = deserialize(res[1]);
+              }
             } catch (error1) {
               error = error1;
               console.error("kdb-srv: exception in JSON.parse");

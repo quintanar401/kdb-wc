@@ -80,6 +80,7 @@ class _KDBSrv extends HTMLElement
     @rType = @attributes['k-return-type']?.textContent || "json"
     @fixJson = @attributes['fix-json']?.textContent || null
     @kFeed = (@attributes['k-feed']?.textContent || "false") is "true"
+    @kDeser = (@attributes['k-deserialize']?.textContent || "false") is "true"
     @hidden = true
     @ws = @wsReq = null
     @wsQueue = []
@@ -173,6 +174,7 @@ class _KDBSrv extends HTMLElement
       try
         try
           res = if @rType is "json" then JSON.parse xhr.responseText else if @rType is "xml" then xhr.responseXML else xhr.responseText
+          res = deserialize res[1] if @kDeser and res instanceof Array and res[0] is 'deserialize'
         catch error
           console.error "kdb-srv: exception in JSON.parse"
           return cb null, "JSON.parse error: "+error.toString()

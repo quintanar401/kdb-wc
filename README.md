@@ -72,7 +72,7 @@ Example:
 ```
 
 Supported attributes:
-* `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml`, `txt`.
+* `k-return-type` - optional, `json` by default. Data format returned by the server. It can be `json`, `xml`, `q` or `txt`. Websockets support `json` and `q`. Http - `json`, `xml` and `txt`, `q` is supported via `k-deserialize` option over json.
 * `k-srv-type` - optional, ws, wss, jsonp, xhttp, https or http (default). xhttp and jsonp mean cross origin requests and require `k-srv-uri` + server side support. ws(s) - websockets.
 * `k-feed` - optional, valid only for websockets. If true the first query establishes a subscription and then all data from the connection will be sent to it.
 * `k-srv-uri` - optional, target websocket or xhttp server. Format: "host:port". By default it is the current web server. If you use xhttp or jsonp you may add an optional protocol prefix: "https://host:port"
@@ -81,6 +81,7 @@ Supported attributes:
 * `k-target` - optional, a server name or `k-id` of an element with this name. It can be used with `srv.q` to turn it into a proxy. Queries will be executed via `srv.q` on another server. When the name is '' this option is ignored.
 * `k-prefix` - optional, a prefix to be added to every query. `xml? ` for example. It is set to either `json?enlist ` or `jsn?enlist ` or `jsp?` if it is not provided and the result type is `json`.
 * `k-id` - optional, this id can be used to link other components to this one.
+* `k-deserialize` - optional, if set to true in an http(s) srv with json return type results like ("deserialize";`int$-8!expr) will be deserialized via c.js. This will help if there are json parse exceptions. You should convert the result byte array to int or long.
 * `fix-json` - optional, if it is set kdb-srv will send an additional query to fix the json serialization issue in the default .z.ph in kdb+ 3.2(it will set .h.tx[\`jsn] to .j.j').
   If srv type is xhttp it will also patch some .h functions to include the correct CORS (cross origin) header. If srv type is jsonp it will also add jsp handler to .h.tx.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.

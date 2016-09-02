@@ -7,17 +7,20 @@
     <title>KDB Demo</title>
 
     <script type="text/javascript" src="../external/document-register-element.js"></script>
-
+    <script type="text/javascript" src="../external/c.js"></script>
     <script type="text/javascript" src="../kdb-wc.js"></script>
 
 </head>
 <body>
   <p>There is one http kdb-srv object that uses Ajax to send requests and expects the result in json format. It also automatically fixes kdb 3.2 issue with "json?query"</p>
-  <kdb-srv k-srv-type="http" fix-json="true"></kdb-srv>
+  <kdb-srv k-srv-type="http" fix-json="true" k-deserialize="true"></kdb-srv>
   <kdb-query k-id="q1">([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;b&gt;BOLD&lt;/b&gt;l"))</kdb-query>
   <p>Both tables are linked to the same query but the second table does not escape html chars.</p>
   <kdb-table k-query="q1"></kdb-table>
   <kdb-table k-query="q1" k-escape-html="false"></kdb-table>
+  <p>Http srv with json return type may have an optional k-deserialize option. In this case results like ("deserialize";`int$-8!expr) will be automatically deserialized via c.js</p>
+  <kdb-query k-id="q2">("deserialize";`int$-8!([] a:1 2 3; b:`h`j`k; c:("a&a";"v%v";"l&lt;b&gt;BOLD&lt;/b&gt;l")))</kdb-query>
+  <kdb-table k-query="q2" k-escape-html="false"></kdb-table>
 </body>
 </html>
 
