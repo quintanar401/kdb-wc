@@ -228,6 +228,7 @@ Supported attributes:
 * `k-config` - optional, either a chart config in JSON format or js name of a variable with the binary config.
 * `k-flow` - optional, if true the chart will be updated with the new data on every update. See examples.
 * `k-id` - optional, this id can be used to link other components to this one.
+* `k-init` - optional, put this attribute at the end. When you (or some react library) will set this attribute on an empty `kdb-chart` element all init functions will be called and the element will be initialized properly.
 * `debug` - optional. Can be set to true to see debug prints in the browser console.
 
 ## kdb-editor

@@ -14,6 +14,7 @@
     <script type="text/javascript" src="../kdb-wc.js"></script>
     <script type="text/javascript" src="../external/c.js"></script>
 
+    <script type="text/javascript" src="../external/vue2.min.js"></script>
 </head>
 <body>
   <p>Dygraph charts.</p>
@@ -37,7 +38,10 @@
 
   <p>You can provide a table as is with columns.</p>
   <kdb-query k-srv="s2" k-update-elements='c4 c5 c6'>update bid:ask+0.5+200?2 from ([] time:10:00:00+til 200; ask:50.0+sums 0.5-200?2)</kdb-query>
-  <kdb-chart k-chart-type="dygraph" k-data-cols="ask bid" k-time-col="time" k-style='width:800px;height:400px;' k-id="c4"></kdb-chart>
+  <div id="vue"><div v-if="true">
+    <kdb-chart k-chart-type="dygraph" k-data-cols="ask bid" k-time-col="time" k-style='width:800px;height:400px;' k-id="c4" k-init></kdb-chart>
+  </div></div>
+  <script>v = new Vue({ el: "#vue", data:{}});  </script>
 
   <p>dygraph-use-config option:</p>
   <kdb-chart k-chart-type="dygraph-use-config" k-style='width:800px;height:400px;' k-id="c5"

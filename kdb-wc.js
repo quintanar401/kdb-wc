@@ -1186,13 +1186,14 @@
       this.inited = false;
       this.chart = null;
       this.chSrc = '';
-      this.kCont = document.createElement('div');
-      this.kCont.className = kClass;
-      this.kCont.style.cssText = kStyle;
       this.kDygraph = /^dygraph/.test(this.kChType);
       if (this.kDygraph) {
         this.kChType = ((ref10 = this.kChType.match(/^dygraph-(.*)$/)) != null ? ref10[1] : void 0) || 'line';
       }
+      this.kCont = document.createElement('div');
+      this.kCont.className = kClass;
+      this.kCont.style.cssText = kStyle;
+      this.innerHTML = '';
       this.appendChild(this.kCont);
       if (this.debug) {
         return console.log("kdb-chart: query:" + this.query + ", type:" + this.kChType + ", cfg:" + this.kConfig);
@@ -1240,6 +1241,13 @@
         if (this.debug) {
           return console.log("kdb-chart: init complete");
         }
+      }
+    };
+
+    _KDBChart.prototype.attributeChangedCallback = function(a, o, n) {
+      if (a === "k-init") {
+        this.createdCallback();
+        return this.attachedCallback();
       }
     };
 

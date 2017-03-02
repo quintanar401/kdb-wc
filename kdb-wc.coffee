@@ -544,11 +544,12 @@ class _KDBChart extends HTMLElement
     @inited = false
     @chart = null
     @chSrc = ''
+    @kDygraph = /^dygraph/.test @kChType
+    @kChType = @kChType.match(/^dygraph-(.*)$/)?[1] || 'line' if @kDygraph
     @kCont = document.createElement 'div'
     @kCont.className = kClass
     @kCont.style.cssText = kStyle
-    @kDygraph = /^dygraph/.test @kChType
-    @kChType = @kChType.match(/^dygraph-(.*)$/)?[1] || 'line' if @kDygraph
+    this.innerHTML = ''
     this.appendChild @kCont
     console.log "kdb-chart: query:#{@query}, type:#{@kChType}, cfg:#{@kConfig}" if @debug
   attachedCallback: ->
@@ -569,6 +570,10 @@ class _KDBChart extends HTMLElement
       return unless @query?.runQuery
       @query.onresult (ev) => @onResult ev
       console.log "kdb-chart: init complete" if @debug
+  attributeChangedCallback: (a,o,n) ->
+    if a is "k-init"
+      @createdCallback()
+      @attachedCallback()
   onResult: (ev) ->
     console.log "kdb-chart: got event" if @debug
     console.log ev.detail if @debug
