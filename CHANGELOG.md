@@ -1,4 +1,5 @@
 ## 0.12.7
+* Adapt kdb-chart to Virtual DOM and createElement function
 
 ## 0.12.7
 * Another workaround for bad .j.j - add option to tranfer q encoded data via http - k-deserialize
