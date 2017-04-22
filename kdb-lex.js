@@ -20,7 +20,7 @@
         cmap = {};
       }
       if (((ref = (t = this.getTokens(txt))) != null ? ref.length : void 0) === 0) {
-        retrun('');
+        return '';
       }
       res = '';
       for (i = j = 0, len = t.length; j < len; i = ++j) {
@@ -43,9 +43,7 @@
     KDBLex.prototype.process = function(txt) {
       var ref, st, t;
       this.toks = [];
-      if (typeof txt === 'string') {
-        t = txt.split('\n');
-      }
+      t = typeof txt === 'string' ? txt.split('\n') : [].concat(txt);
       st = {
         state: 'q',
         txt: t,
@@ -225,6 +223,7 @@
         return st;
       }
       if (cmt = st.line.match(/^(\s+)(\/.*)/)) {
+        st = this.pushTxt(st);
         if (cmt[1]) {
           this.toks.push({
             type: "k-text",
@@ -233,7 +232,7 @@
             y: st.y
           });
         }
-        st.line = 0;
+        st.line = null;
         this.toks.push({
           type: "k-comment",
           token: cmt[2],

@@ -5,7 +5,7 @@ class KDBLex
   filter: (txt) -> @getHtml txt
   getHtml: (txt,cmap) ->
     cmap ?= {}
-    retrun '' if (t = @getTokens txt)?.length is 0
+    return '' if (t = @getTokens txt)?.length is 0
     res = ''
     for o,i in t
       if o.x is 0
@@ -15,7 +15,7 @@ class KDBLex
     if res then res+"</div>" else res
   process: (txt) ->
     @toks = []
-    t = txt.split '\n' if typeof txt is 'string'
+    t = if typeof txt is 'string' then txt.split('\n') else [].concat(txt)
     st = state:'q', txt: t, reg:'', line: null, lstart: true, x:0, y:-1
     while st.txt.length>0 or st.line?.length>0
       st = @next st
@@ -99,8 +99,9 @@ class KDBLex
       st.line = null
       return st
     if cmt = st.line.match /^(\s+)(\/.*)/
+      st = @pushTxt st
       @toks.push type:"k-text", token: cmt[1], x: st.x, y: st.y if cmt[1]
-      st.line = 0
+      st.line = null
       @toks.push type:"k-comment", token: cmt[2], x: st.x, y: st.y
       return st
     if st.line[0] is '"'

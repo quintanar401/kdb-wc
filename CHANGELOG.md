@@ -1,4 +1,7 @@
-## 0.12.7
+## 0.12.9
+* Fix bugs in KDBLex
+
+## 0.12.8
 * Adapt kdb-chart to Virtual DOM and createElement function
 
 ## 0.12.7
