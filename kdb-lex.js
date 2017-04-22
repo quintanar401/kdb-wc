@@ -288,12 +288,12 @@
         if (id = st.line.match(/^-[1-9][0-9]?\s*!/)) {
           return this.pushTok(st, "k-keyword-function", id[0]);
         }
-        if (id = st.line.match(/^(`\:[\:a-zA-Z0-9\._\/]*|`(?:[a-zA-Z0-9\.][\:a-zA-Z0-9\._]*)?)/)) {
-          return this.pushTok(st, "k-const-sym", id[0]);
-        }
         if (id = st.line.match(/^(0x[0-9a-fA-F]+|\d+[bhicjefpnuvt]?)/)) {
           return this.pushTok(st, "k-number-int", id[0]);
         }
+      }
+      if (id = st.line.match(/^(`\:[\:a-zA-Z0-9\._\/]*|`(?:[a-zA-Z0-9\.][\:a-zA-Z0-9\._]*)?)/)) {
+        return this.pushTok(st, "k-const-sym", id[0]);
       }
       if (id = st.line.match(/^(\'|\/\:|\\\:|\'\:|\\|\/|0\:|1\:|2\:)/)) {
         return this.pushTok(st, "k-operator", id[0]);
