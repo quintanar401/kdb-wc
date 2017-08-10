@@ -102,7 +102,7 @@ class KDBLex
       st = @pushTxt st
       @toks.push type:"k-text", token: cmt[1], x: st.x, y: st.y if cmt[1]
       st.line = null
-      @toks.push type:"k-comment", token: cmt[2], x: st.x, y: st.y
+      @toks.push type:"k-comment", token: cmt[2], x: st.x+cmt[1].length, y: st.y
       return st
     if st.line[0] is '"'
       st = @pushTxt st

@@ -236,7 +236,7 @@
         this.toks.push({
           type: "k-comment",
           token: cmt[2],
-          x: st.x,
+          x: st.x + cmt[1].length,
           y: st.y
         });
         return st;
