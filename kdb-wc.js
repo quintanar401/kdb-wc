@@ -28,20 +28,32 @@
   })();
 
   extractInfo = function(v) {
-    var ref, txt;
+    var e, j, len, r, ref, ref1, txt;
     if (typeof v === 'string') {
       return v;
     }
     txt = '';
     if (v.nodeName === 'SELECT') {
-      if (v.selectedIndex >= 0) {
-        txt = v.options[v.selectedIndex].text;
+      if (v.multiple) {
+        r = [];
+        ref = v.options;
+        for (j = 0, len = ref.length; j < len; j++) {
+          e = ref[j];
+          if (e.selected) {
+            r.push(e.text);
+          }
+        }
+        txt = r.join(' ');
+      } else {
+        if (v.selectedIndex >= 0) {
+          txt = v.options[v.selectedIndex].text;
+        }
       }
     } else if (v.nodeName === 'INPUT') {
       if (v.type === 'checkbox') {
         txt = v.checked ? '1b' : '0b';
       } else if (v.type === 'radio') {
-        txt = ((ref = v.form.querySelector("input[type='radio'][name='" + v.name + "']:checked")) != null ? ref.value : void 0) || '';
+        txt = ((ref1 = v.form.querySelector("input[type='radio'][name='" + v.name + "']:checked")) != null ? ref1.value : void 0) || '';
       } else {
         txt = (v != null ? v.value : void 0) || '';
       }

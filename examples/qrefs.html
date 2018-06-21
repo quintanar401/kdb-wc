@@ -15,7 +15,8 @@
   <kdb-srv k-srv-type="http" fix-json="true"></kdb-srv>
 
   <p>Selects</p>
-  <select k-id='s'><option value='1'>sym1</option><option value='1'>sym2</option><option value='1'>sym3</option></select>
+  <select k-id='s'><option value='1'>sym1</option><option value='1'>sym2</option><option value='1'>sym3</option></select><br>
+  <select k-id="s2" multiple><option selected value='1'>sym1</option><option value='2'>sym2</option><option selected value='3'>sym3</option></select>
 
   <p>In forms</p>
   <form>
@@ -44,7 +45,7 @@
   <p>Buttons can be linked to a query to cause rerun on a click</p>
   <button onclick="document.getElementById('q').rerunQuery()">Refresh</button> Click it to resend the query
 
-  <kdb-query id="q" k-id="q1" k-update-elements="pre">.Q.s `select`txt`pass`check`radio`textarea`span!(`$s$;"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
+  <kdb-query id="q" k-id="q1" k-update-elements="pre">.Q.s `select`select2`txt`pass`check`radio`textarea`span!(`$s$;"$s2$";"$ft$";"$fp$";$fc$;`$fr$;"$fta$";$t$)</kdb-query>
 
   <p>Returned result: </p>
   <pre k-id="pre"></pre>

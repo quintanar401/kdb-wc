@@ -1,3 +1,6 @@
+## 0.12.10
+* support multiple select
+
 ## 0.12.9
 * Fix bugs in KDBLex
 

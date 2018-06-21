@@ -17,7 +17,14 @@ extractInfo = (v) ->
   return v if typeof v is 'string'
   txt = ''
   if v.nodeName is 'SELECT'
-    txt = v.options[v.selectedIndex].text if v.selectedIndex>=0
+    if v.multiple
+      r = []
+      for e in v.options
+        if e.selected
+          r.push e.text
+      txt = r.join ' '
+    else
+      txt = v.options[v.selectedIndex].text if v.selectedIndex>=0
   else if v.nodeName is 'INPUT'
     if v.type is 'checkbox'
       txt = if v.checked then '1b' else '0b'
