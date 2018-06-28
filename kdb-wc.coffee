@@ -22,7 +22,7 @@ extractInfo = (v) ->
       for e in v.options
         if e.selected
           r.push e.text
-      txt = r.join ' '
+      txt = r.join '\n'
     else
       txt = v.options[v.selectedIndex].text if v.selectedIndex>=0
   else if v.nodeName is 'INPUT'

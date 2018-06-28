@@ -43,7 +43,7 @@
             r.push(e.text);
           }
         }
-        txt = r.join(' ');
+        txt = r.join('\n');
       } else {
         if (v.selectedIndex >= 0) {
           txt = v.options[v.selectedIndex].text;
