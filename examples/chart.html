@@ -26,8 +26,8 @@
   <kdb-chart k-style='width:800px;height:400px;' k-id="c1"></kdb-chart>
 
   <p>Data is sent via binary ws in C3 format. Timeseries example.</p>
-  <kdb-query k-update-elements='c2'> `data`axis!(`x`columns!(`x;((`x,2013.01.01+til 6);(`data1,30 200 100 400 150 250);
-      (`data2,130 340 200 500 250 350)));enlist[`x]!enlist `type`tick!(`timeseries;enlist[`format]!enlist "%Y-%m-%d"))</kdb-query>
+  <kdb-query k-update-elements='c2'> `data`axis`zoom!(`x`columns!(`x;((`x,2013.01.01+til 6);(`data1,30 200 100 400 150 250);
+      (`data2,130 340 200 500 250 350)));enlist[`x]!enlist `type`tick!(`timeseries;enlist[`format]!enlist "%Y-%m-%d");enlist[`enabled]!enlist 1b)</kdb-query>
   <kdb-chart k-style='width:800px;height:400px;' k-id="c2"></kdb-chart>
 
   <p>Data is sent via http in C3 format. Area chart.</p>
